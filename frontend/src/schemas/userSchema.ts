@@ -5,9 +5,8 @@ export const userSchema = z.object({
   id: z.number().int().positive(),
   nome: z.string().min(2, "Nome deve ter no mínimo 2 caracteres"),
   email: z.string().email("E-mail inválido"),
-  tipo: z.enum(["admin", "cliente"], {
-    // 👇 aqui você só pode passar uma string simples
-    error: "Tipo deve ser 'admin' ou 'cliente'",
+  tipo: z.enum(["ADMIN", "CLIENTE"], {
+    error: "Tipo deve ser 'ADMIN' ou 'CLIENTE'",
   }),
 });
 
