@@ -1,4 +1,4 @@
-Agenda Barber
+💈 Agenda Barber
 
 Agenda Barber é um sistema web para gerenciamento de agendamentos de barbeiros, permitindo controle de horários, clientes e serviços de forma prática e eficiente.
 
@@ -20,52 +20,61 @@ Sistema responsivo, acessível de desktop e mobile.
 
 O projeto utiliza uma stack moderna e escalável:
 
-Front-end
+⚡ Front-end
 
-React: Biblioteca JavaScript para criação de interfaces de usuário.
+React → Biblioteca JavaScript para criação de interfaces de usuário.
 
-Vite: Bundler rápido para desenvolvimento com React.
+Vite → Bundler rápido para desenvolvimento com React.
 
-Twind: CSS-in-JS com classes utilitárias (alternativa ao Tailwind).
+TypeScript → Superset de JavaScript com tipagem estática.
 
-TypeScript: Superset de JavaScript com tipagem estática.
+Twind → CSS-in-JS com classes utilitárias (alternativa ao Tailwind).
 
-Back-end
+React Query (@tanstack/react-query) → Gerenciamento de dados assíncronos (fetch, cache, sincronização).
 
-Spring Boot (Groovy): Framework Java/Groovy para construção de APIs RESTful.
+Zod → Validação e tipagem dos dados vindos da API.
 
-Gradle: Sistema de build e gerenciamento de dependências.
+Shadcn/UI → Biblioteca de componentes de UI acessíveis e prontos para uso.
 
-Spring Security: Autenticação e autorização de usuários.
+⚙️ Back-end
 
-Banco de Dados
+Spring Boot (Groovy) → Framework Java/Groovy para construção de APIs RESTful.
 
-MySQL ou PostgreSQL: Sistema de gerenciamento de banco de dados relacional.
+Gradle → Sistema de build e gerenciamento de dependências.
+
+Spring Security → Autenticação e autorização de usuários.
+
+🗄️ Banco de Dados
+
+MySQL ou PostgreSQL → Sistema de gerenciamento de banco de dados relacional.
 
 Estrutura de tabelas para usuários, agendamentos, serviços e logs de atividades.
 
-Ferramentas e Complementos
+🔧 Ferramentas e Complementos
 
-Git & GitHub: Controle de versão.
+Git & GitHub → Controle de versão.
 
-VSCode / IntelliJ IDEA: IDE recomendada para desenvolvimento.
+VSCode / IntelliJ IDEA → IDEs recomendadas para desenvolvimento.
 
-Postman / Insomnia: Teste e documentação de APIs.
+Postman / Insomnia → Teste e documentação de APIs.
 
-npm: Gerenciador de pacotes para front-end.
+npm → Gerenciador de pacotes para front-end.
 
 📁 Estrutura do Projeto
-frontend/           # Código front-end React + Vite
+frontend/                # Código front-end React + Vite
   ├─ src/
-  │   ├─ components/   # Componentes React
-  │   ├─ pages/        # Páginas do sistema
-  │   ├─ App.tsx       # Componente principal
-  │   └─ main.tsx      # Entry point do Vite
+  │   ├─ components/     # Componentes React e UI (Shadcn)
+  │   ├─ hooks/          # React Query + Zod validation
+  │   ├─ service/        # Serviços para consumo da API
+  │   ├─ schemas/        # Schemas Zod
+  │   ├─ pages/          # Páginas do sistema
+  │   ├─ App.tsx         # Componente principal
+  │   └─ main.tsx        # Entry point do Vite
 
-backend/            # Código back-end Spring Boot (Groovy + Gradle)
+backend/                 # Código back-end Spring Boot (Groovy + Gradle)
   ├─ src/
   │   ├─ main/
-  │   │   ├─ groovy/      # Código da aplicação (controllers, services, models)
-  │   │   ├─ resources/   # application.yml, templates, arquivos estáticos
-  │   └─ test/             # Testes unitários
-  └─ build.gradle          # Configuração do Gradle
+  │   │   ├─ groovy/     # Código da aplicação (controllers, services, models)
+  │   │   ├─ resources/  # application.yml, templates, arquivos estáticos
+  │   └─ test/           # Testes unitários
+  └─ build.gradle        # Configuração do Gradle
