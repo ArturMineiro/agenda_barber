@@ -1,27 +1,30 @@
+import { useState } from "react";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { Stack } from "expo-router";
 import { StatusBar } from "expo-status-bar";
-import "../global.css"; // ⬅️ NativeWind/TailwindCSS
+import Navbar from "@/components/Navbar";
+import DropdownMenu from "@/components/DropdownMenu";
+import "../global.css";
 
 const queryClient = new QueryClient();
 
 export default function RootLayout() {
+  const [menuOpen, setMenuOpen] = useState(false);
+
   return (
     <QueryClientProvider client={queryClient}>
-      {/* Stack container para todas as rotas */}
-      <Stack>
-        {/* index.tsx será renderizado em "/" */}
-        <Stack.Screen name="index" options={{ headerShown: false }} />
-        <Stack.Screen 
-  name="teste" 
-  options={{ headerShown: true, title: "Tela de Teste" }} 
-/>
+      {/* Navbar */}
+      <Navbar menuOpen={menuOpen} setMenuOpen={setMenuOpen} />
 
-        {/* explore.tsx será renderizado em "/explore" automaticamente */}
-        {/* outras páginas também podem ser navegadas via router.push("/nomeDaPagina") */}
-      </Stack>
+      {/* Dropdown fora do Stack */}
+      {menuOpen && <DropdownMenu setMenuOpen={setMenuOpen} />}
 
-      {/* Status bar */}
+      {/* Stack */}
+  <Stack screenOptions={{ headerShown: false, contentStyle: { backgroundColor: 'transparent' } }}>
+    <Stack.Screen name="index" />
+  </Stack>
+
+
       <StatusBar style="auto" />
     </QueryClientProvider>
   );
