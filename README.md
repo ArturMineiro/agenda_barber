@@ -78,3 +78,24 @@ backend/                 # Código back-end Spring Boot (Groovy + Gradle)
   │   │   ├─ resources/  # application.yml, templates, arquivos estáticos
   │   └─ test/           # Testes unitários
   └─ build.gradle        # Configuração do Gradle
+
+Expo Router + NativeWind
+frontend-app/
+├── app/
+│   ├── _layout.tsx       ← layout raiz do app (RootLayout)
+│   ├── +not-found.tsx    ← página 404 (rota que não existe)
+│   ├── (tabs)/           ← pasta de abas (TabLayout)
+│   │   ├── _layout.tsx   ← layout de tabs (TabLayout)
+│   │   ├── index.tsx     ← primeira aba (Home)
+│   │   └── explore.tsx   ← segunda aba (Explore)
+│   └── outros_arquivos.tsx ← outras telas “soltas” do app
+├── assets/               ← imagens, fontes, ícones
+├── components/           ← componentes reutilizáveis (botões, cards, textos customizados)
+├── constants/            ← cores, temas, strings, valores fixos
+├── hooks/                ← hooks customizados (useColorScheme, useAuth etc.)
+├── scripts/              ← scripts para automatizar tarefas (ex.: reset-project.js)
+├── global.css            ← Tailwind CSS
+├── metro.config.js        ← configuração Metro bundler
+├── babel.config.js        ← configuração Babel + NativeWind
+├── tailwind.config.js     ← configuração Tailwind / NativeWind
+├── nativewind-env.d.ts    ← tipagem TypeScript para `className`
