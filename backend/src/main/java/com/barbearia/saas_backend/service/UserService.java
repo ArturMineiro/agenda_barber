@@ -1,6 +1,7 @@
 package com.barbearia.saas_backend.service;
 
 
+
 import com.barbearia.saas_backend.model.User;
 import com.barbearia.saas_backend.repository.UserRepository;
 import lombok.RequiredArgsConstructor;
@@ -17,7 +18,9 @@ public class UserService {
     private final PasswordEncoder passwordEncoder;
 
     public User saveUser(User user) {
-        user.setSenha(passwordEncoder.encode(user.getSenha()));
+        if (user.getPassword() != null) {
+            user.setPassword(passwordEncoder.encode(user.getPassword()));
+        }
         return userRepository.save(user);
     }
 
@@ -27,5 +30,9 @@ public class UserService {
 
     public Optional<User> findByEmail(String email) {
         return userRepository.findByEmail(email);
+    }
+
+    public Optional<User> findByGoogleId(String googleId) {
+        return userRepository.findByGoogleId(googleId);
     }
 }

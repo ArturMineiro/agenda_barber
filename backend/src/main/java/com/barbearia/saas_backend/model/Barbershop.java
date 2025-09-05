@@ -1,38 +1,38 @@
+// src/main/java/com/barbearia/saas_backend/model/Barbershop.java
 package com.barbearia.saas_backend.model;
 
 import jakarta.persistence.*;
+import jakarta.validation.constraints.Email;
+import jakarta.validation.constraints.NotBlank;
 import lombok.*;
 import java.time.LocalDateTime;
 
 @Entity
-@Table(name = "users")
+@Table(name = "barbershops")
 @Data
 @NoArgsConstructor
 @AllArgsConstructor
 @Builder
-public class User {
+public class Barbershop {
 
     @Id
     @GeneratedValue(strategy = GenerationType.IDENTITY)
     private Long id;
 
+    @NotBlank
     private String name;
 
-    @Column(unique = true, nullable = false)
-    private String email;
+    // Can store CNPJ or CPF
+    @Column(name = "tax_id", unique = true, nullable = false)
+    private String taxId;
 
-    // nullable to allow Google-only accounts
-    private String password; 
+    private String address;
 
     private String phone;
 
-    @Enumerated(EnumType.STRING)
-    private UserRole role;
-
+    @Email
     @Column(unique = true)
-    private String googleId;
-
-    private String avatarUrl;
+    private String email;
 
     private LocalDateTime createdAt;
     private LocalDateTime updatedAt;
@@ -46,12 +46,5 @@ public class User {
     @PreUpdate
     protected void onUpdate() {
         updatedAt = LocalDateTime.now();
-    }
-
-    public enum UserRole {
-        CLIENT,
-        BARBER,
-        ADMIN_BARBERSHOP,
-        SUPER_ADMIN
     }
 }
