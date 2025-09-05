@@ -18,12 +18,14 @@ public class SecurityConfig {
     @Bean
     public SecurityFilterChain filterChain(HttpSecurity http) throws Exception {
         http
-            .csrf().disable() // desativa CSRF para testes via Insomnia
-            .authorizeHttpRequests()
-                .requestMatchers("/api/users/**").permitAll() // permite acesso sem login
-                .anyRequest().authenticated()
-            .and()
-            .httpBasic(); // autenticação básica, opcional para testes
+            .csrf(csrf -> csrf.disable()) // desativa CSRF
+            .authorizeHttpRequests(auth -> auth
+            .requestMatchers("/api/**").permitAll() // libera todas as rotas da API
+            .anyRequest().authenticated()
+            )
+            .httpBasic(); // auth básica
+    
         return http.build();
     }
+    
 }
