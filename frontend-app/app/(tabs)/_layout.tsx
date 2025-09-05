@@ -23,52 +23,58 @@ export default function HomeScreen() {
         </TouchableOpacity>
       </View>
 
-      {/* Filtros */}
-      <View className="flex-row justify-between mb-6">
-        {["✂️ Cabelo", "🧔 Barba", "🎨 Acabamento"].map((item) => (
-          <TouchableOpacity key={item} className="bg-grayDark px-4 py-2 rounded-full">
-            <Text className="text-white">{item}</Text>
-          </TouchableOpacity>
-        ))}
-      </View>
-      {/* Banner Estilizado */}
-<View
-  style={{
-    backgroundColor: '#68C5DB', // agora usando sua primary do Tailwind
-    borderRadius: 24,            // cantos mais arredondados
-    padding: 24,                 // padding maior
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'space-between',
-    shadowColor: "#000",
-    shadowOffset: { width: 0, height: 6 },
-    shadowOpacity: 0.3,
-    shadowRadius: 8,
-    elevation: 8, // para Android
-    marginBottom: 16, // espaçamento abaixo do banner
-  }}
->
-  {/* Texto */}
-  <View style={{ flex: 1, marginRight: 20 }}>
-    <Text style={{ color: 'white', fontSize: 22, fontWeight: 'bold', marginBottom: 6 }}>
-      Agende nos melhores
-    </Text>
-    <Text style={{ color: 'white', fontSize: 18 }}>
-      com ADJ Barber
-    </Text>
-  </View>
-
-  {/* Ilustração */}
-  <Image
-    source={require('../../assets/images/melhores.png')}
-    style={{
-      width: 140,   // aumentando a imagem
-      height: 140,
-      borderRadius: 16, // cantos da imagem levemente arredondados
-    }}
-    resizeMode="contain"
-  />
+{/* Filtros */}
+<View className="flex-row justify-between mb-6">
+  {["✂️ Cabelo", "🧔 Barba", "🎨 Acabamento"].map((item) => (
+    <TouchableOpacity 
+      key={item} 
+      className="bg-grayDark px-4 py-2 rounded-xl"  // aqui usei rounded-xl
+    >
+      <Text className="text-white">{item}</Text>
+    </TouchableOpacity>
+  ))}
 </View>
+
+
+      
+      {/* Banner Estilizado */}
+      <View
+        style={{
+          backgroundColor: '#68C5DB', // agora usando sua primary do Tailwind
+          borderRadius: 24,            // cantos mais arredondados
+          padding: 24,                 // padding maior
+          flexDirection: 'row',
+          alignItems: 'center',
+          justifyContent: 'space-between',
+          shadowColor: "#000",
+          shadowOffset: { width: 0, height: 6 },
+          shadowOpacity: 0.3,
+          shadowRadius: 8,
+          elevation: 8, // para Android
+          marginBottom: 16, // espaçamento abaixo do banner
+        }}
+      >
+        {/* Texto */}
+        <View style={{ flex: 1, marginRight: 20 }}>
+          <Text style={{ color: 'white', fontSize: 22, fontWeight: 'bold', marginBottom: 6 }}>
+            Agende nos melhores
+          </Text>
+          <Text style={{ color: 'white', fontSize: 18 }}>
+            com DAJ Cortez
+          </Text>
+        </View>
+
+        {/* Ilustração */}
+        <Image
+          source={require('../../assets/images/melhores.png')}
+          style={{
+            width: 140,   // aumentando a imagem
+            height: 140,
+            borderRadius: 16, // cantos da imagem levemente arredondados
+          }}
+          resizeMode="contain"
+        />
+      </View>
 
 
     {/* Agendamento */}

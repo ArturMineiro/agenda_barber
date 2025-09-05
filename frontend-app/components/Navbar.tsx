@@ -17,10 +17,10 @@ export default function Navbar({ menuOpen, setMenuOpen }: NavbarProps) {
             />
 
             {/* ADJ com fonte diferenciada */}
-            <Text style={{ fontFamily: 'Georgia', fontSize: 28, color: '#68C5DB' }}>ADJ</Text>
+            <Text style={{ fontFamily: 'Georgia', fontSize: 28, color: '#68C5DB' }}>DAJ</Text>
 
             {/* BARBER com fonte normal */}
-            <Text className="text-white text-xl font-bold ml-2">BARBER</Text>
+            <Text className="text-white text-xl font-bold ml-2">CORTEZ</Text>
         </Text>
 
         {/* Hamburger moderno */}
