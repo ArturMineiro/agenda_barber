@@ -14,8 +14,14 @@ export default function HomeScreen() {
     <ScrollView className="flex-1 bg-black px-4 pt-4">
       
       {/* Cabeçalho */}
-      <Text className="text-white text-xl mb-1">Olá, Miguel!</Text>
-      <Text className="text-gray mb-4">Sexta, 2 de Fevereiro</Text>
+      <Text className="text-white text-xl mb-1">Olá, Dammvid!</Text>
+      <Text className="text-gray mb-4">
+        {new Date().toLocaleDateString('pt-BR', {
+          weekday: 'long',
+          day: 'numeric',
+          month: 'long',
+        }).replace('-feira', '')} 
+      </Text>
 
       {/* Busca */}
       <View className="flex-row mb-4 items-center">
