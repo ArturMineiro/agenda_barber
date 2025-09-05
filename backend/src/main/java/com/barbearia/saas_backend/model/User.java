@@ -16,18 +16,23 @@ public class User {
     @GeneratedValue(strategy = GenerationType.IDENTITY)
     private Long id;
 
-    private String nome;
+    private String name;
 
     @Column(unique = true, nullable = false)
     private String email;
 
-    @Column(nullable = false)
-    private String senha; // hash da senha
+    // nullable to allow Google-only accounts
+    private String password; 
 
-    private String telefone;
+    private String phone;
 
     @Enumerated(EnumType.STRING)
-    private TipoUser tipo;
+    private UserRole role;
+
+    @Column(unique = true)
+    private String googleId;
+
+    private String avatarUrl;
 
     private LocalDateTime createdAt;
     private LocalDateTime updatedAt;
@@ -43,10 +48,10 @@ public class User {
         updatedAt = LocalDateTime.now();
     }
 
-    public enum TipoUser {
-        CLIENTE,
-        BARBEIRO,
-        ADMIN_BARBEARIA,
+    public enum UserRole {
+        CLIENT,
+        BARBER,
+        ADMIN_BARBERSHOP,
         SUPER_ADMIN
     }
 }
