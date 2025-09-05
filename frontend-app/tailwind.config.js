@@ -16,7 +16,7 @@ module.exports = {
         grayDark: "#1f2937",    // cinza escuro atualizado
         gray: "#888888",        // cinza médio
         white: "#FFFFFF",       // branco
-        black: "#000000",       // preto
+        black: "#141518",       // preto
         card: "#1F1F1F",        // fundo de card escuro
       },
     },
