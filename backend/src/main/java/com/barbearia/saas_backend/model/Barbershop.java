@@ -34,6 +34,10 @@ public class Barbershop {
     @Column(unique = true)
     private String email;
 
+    @ManyToOne(fetch = FetchType.LAZY)
+    @JoinColumn(name = "owner_id")
+    private User owner;
+
     private LocalDateTime createdAt;
     private LocalDateTime updatedAt;
 
