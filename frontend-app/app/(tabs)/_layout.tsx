@@ -1,9 +1,18 @@
-import { View, Text, ScrollView } from "react-native";
+import { Tabs } from "expo-router";
 
-export default function TabLayout({ children }: { children: React.ReactNode }) {
+export default function TabsLayout() {
   return (
-    <ScrollView className="flex-1 bg-black px-4 pt-4">
-      {children}
-    </ScrollView>
+    <Tabs
+      screenOptions={{
+        headerShown: false,
+        tabBarStyle: { backgroundColor: "black" },
+        tabBarActiveTintColor: "#68C5DB",
+        tabBarInactiveTintColor: "gray",
+      }}
+    >
+      <Tabs.Screen name="home" options={{ title: "Home" }} />
+      <Tabs.Screen name="profile" options={{ title: "Perfil" }} />
+      <Tabs.Screen name="settings" options={{ title: "Config" }} />
+    </Tabs>
   );
 }

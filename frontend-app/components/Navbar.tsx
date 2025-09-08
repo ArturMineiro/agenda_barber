@@ -12,7 +12,7 @@ export default function Navbar({ menuOpen, setMenuOpen }: NavbarProps) {
 
   return (
     <SafeAreaView className="bg-grayDark">
-      <View className="p-4 flex-row items-center justify-between mt-6">
+      <View className="p-4 flex-row items-center justify-between">
         {/* Logo como link */}
         <TouchableOpacity
           className="flex-row items-center flex-1"
