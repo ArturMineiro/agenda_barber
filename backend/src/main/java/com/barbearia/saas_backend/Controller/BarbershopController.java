@@ -1,6 +1,6 @@
-
 package com.barbearia.saas_backend.Controller;
 
+import com.barbearia.saas_backend.dto.BarbershopRequest;
 import com.barbearia.saas_backend.model.Barbershop;
 import com.barbearia.saas_backend.service.BarbershopService;
 import jakarta.validation.Valid;
@@ -29,14 +29,14 @@ public class BarbershopController {
     }
 
     @PostMapping
-    public ResponseEntity<Barbershop> create(@Valid @RequestBody Barbershop barbershop) {
-        Barbershop saved = service.create(barbershop);
+    public ResponseEntity<Barbershop> create(@Valid @RequestBody BarbershopRequest request) {
+        Barbershop saved = service.create(request);
         return ResponseEntity.created(URI.create("/api/barbershops/" + saved.getId())).body(saved);
     }
 
     @PutMapping("/{id}")
-    public ResponseEntity<Barbershop> update(@PathVariable Long id, @Valid @RequestBody Barbershop barbershop) {
-        return ResponseEntity.ok(service.update(id, barbershop));
+    public ResponseEntity<Barbershop> update(@PathVariable Long id, @Valid @RequestBody BarbershopRequest request) {
+        return ResponseEntity.ok(service.update(id, request));
     }
 
     @DeleteMapping("/{id}")
