@@ -4,7 +4,7 @@ import { useRouter } from "expo-router";
 import { Ionicons } from "@expo/vector-icons";
 
 export default function CadastroScreen() {
-  const [userType, setUserType] = useState<"cliente" | "barbearia">("cliente");
+  const [userType, setUserType] = useState<"cliente" | "barbeiro">("cliente");
   const [nome, setNome] = useState("");
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
@@ -20,7 +20,7 @@ export default function CadastroScreen() {
   const validate = () => {
     const newErrors: { [key: string]: string } = {};
 
-    if (!nome) newErrors.nome = userType === "cliente" ? "Nome obrigatório" : "Nome da Barbearia obrigatório";
+    if (!nome) newErrors.nome = userType === "cliente" ? "Nome obrigatório" : "Nome da Barbeiro obrigatório";
     if (!email) newErrors.email = "Email obrigatório";
     else if (!/\S+@\S+\.\S+/.test(email)) newErrors.email = "Email inválido";
     if (!password) newErrors.password = "Senha obrigatória";
@@ -39,7 +39,7 @@ export default function CadastroScreen() {
 
     Alert.alert(
       "Sucesso",
-      `${userType === "cliente" ? "Cliente" : "Barbearia"} cadastrado: ${nome}`
+      `${userType === "cliente" ? "Cliente" : "Barbeiro"} cadastrado: ${nome}`
     );
 
     router.push("/login");
@@ -61,7 +61,7 @@ export default function CadastroScreen() {
 
       {/* Select tipo de usuário */}
       <View style={{ flexDirection: "row", marginBottom: 24, borderRadius: 12, overflow: "hidden", borderWidth: 1, borderColor: "#444" }}>
-        {["cliente", "barbearia"].map((type) => (
+        {["cliente", "barbeiro"].map((type) => (
           <TouchableOpacity
             key={type}
             style={{
@@ -70,7 +70,7 @@ export default function CadastroScreen() {
               backgroundColor: userType === type ? "#68C5DB" : "#1C1D22",
               alignItems: "center",
             }}
-            onPress={() => setUserType(type as "cliente" | "barbearia")}
+            onPress={() => setUserType(type as "cliente" | "barbeiro")}
           >
             <Text style={{ color: userType === type ? "white" : "gray", fontWeight: "bold", textTransform: "capitalize" }}>
               {type}
@@ -82,7 +82,7 @@ export default function CadastroScreen() {
       {/* Campos */}
       <View style={{ gap: 12 }}>
         <TextInput
-          placeholder={userType === "cliente" ? "Nome" : "Nome da Barbearia"}
+          placeholder={userType === "cliente" ? "Nome" : "Nome da Barbeiro"}
           placeholderTextColor="#888"
           style={{
             backgroundColor: "#1C1D22",
@@ -202,7 +202,7 @@ export default function CadastroScreen() {
         }}
       >
         <Text style={{ color: "white", fontWeight: "bold", textAlign: "center", fontSize: 16 }}>
-          {userType === "cliente" ? "Cadastrar Cliente" : "Cadastrar Barbearia"}
+          {userType === "cliente" ? "Cadastrar Cliente" : "Cadastrar Barbeiro"}
         </Text>
       </TouchableOpacity>
 

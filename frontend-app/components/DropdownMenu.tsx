@@ -20,15 +20,7 @@ export default function DropdownMenu({ setMenuOpen }: DropdownProps) {
         <Text className="text-white">Login</Text>
       </TouchableOpacity>
 
-      <TouchableOpacity
-        className="px-4 py-2"
-        onPress={() => {
-          router.push("/cadastro"); // 👉 vai para a tela de cadastro
-          setMenuOpen(false);
-        }}
-      >
-        <Text className="text-white">Cadastrar Barbearia</Text>
-      </TouchableOpacity>
+  
     </View>
   );
 }
