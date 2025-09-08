@@ -1,9 +1,12 @@
+import { Stack } from "expo-router";
 import { useState } from "react";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
-import { Stack } from "expo-router";
 import { StatusBar } from "expo-status-bar";
+import { SafeAreaView, View } from "react-native";
 import Navbar from "@/components/Navbar";
 import DropdownMenu from "@/components/DropdownMenu";
+import Constants from "expo-constants";
+
 import "../global.css";
 
 const queryClient = new QueryClient();
@@ -13,19 +16,24 @@ export default function RootLayout() {
 
   return (
     <QueryClientProvider client={queryClient}>
-      {/* Navbar */}
-      <Navbar menuOpen={menuOpen} setMenuOpen={setMenuOpen} />
+    <SafeAreaView className="flex-1 bg-black" style={{ paddingTop: Constants.statusBarHeight }}>
+      <StatusBar style="light" translucent />
+        {/* Navbar global */}
+        <View style={{ zIndex: 10 }}>
+          <Navbar menuOpen={menuOpen} setMenuOpen={setMenuOpen} />
+        </View>
 
-      {/* Dropdown fora do Stack */}
-      {menuOpen && <DropdownMenu setMenuOpen={setMenuOpen} />}
+        {/* Dropdown */}
+        {menuOpen && <DropdownMenu setMenuOpen={setMenuOpen} />}
 
-      {/* Stack */}
-  <Stack screenOptions={{ headerShown: false, contentStyle: { backgroundColor: 'transparent' } }}>
-    <Stack.Screen name="index" />
-  </Stack>
-
-
-      <StatusBar style="auto" />
+        {/* Rotas globais */}
+        <Stack screenOptions={{ headerShown: false }}>
+          <Stack.Screen name="index" /> 
+          <Stack.Screen name="login" />
+          <Stack.Screen name="cadastro" />
+          <Stack.Screen name="(tabs)" />
+        </Stack>
+      </SafeAreaView>
     </QueryClientProvider>
   );
 }

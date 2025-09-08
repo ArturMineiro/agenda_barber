@@ -1,5 +1,5 @@
-import { View, Text, TouchableOpacity, Image } from "react-native";
-import { useRouter } from "expo-router"; // ou useNavigation se estiver usando react-navigation
+import { View, Text, TouchableOpacity, Image, SafeAreaView } from "react-native";
+import { useRouter } from "expo-router"; 
 import tesourapente from "../assets/images/tesoura-e-pente.png";
 
 type NavbarProps = {
@@ -8,15 +8,15 @@ type NavbarProps = {
 };
 
 export default function Navbar({ menuOpen, setMenuOpen }: NavbarProps) {
-  const router = useRouter(); // para navegação
+  const router = useRouter();
 
   return (
-    <View>
-      <View className="bg-black p-4 flex-row items-center justify-between">
+    <SafeAreaView className="bg-grayDark">
+      <View className="p-4 flex-row items-center justify-between">
         {/* Logo como link */}
         <TouchableOpacity
           className="flex-row items-center flex-1"
-          onPress={() => router.push("/")} // volta para a home
+          onPress={() => router.push("/")}
         >
           <Image
             source={tesourapente}
@@ -26,7 +26,7 @@ export default function Navbar({ menuOpen, setMenuOpen }: NavbarProps) {
           <Text className="text-white text-xl font-bold ml-2">CORTEZ</Text>
         </TouchableOpacity>
 
-        {/* Hamburger moderno */}
+        {/* Menu Hamburguer */}
         <TouchableOpacity
           onPress={() => setMenuOpen(!menuOpen)}
           className="flex-col justify-between h-4 w-6"
@@ -38,7 +38,7 @@ export default function Navbar({ menuOpen, setMenuOpen }: NavbarProps) {
       </View>
 
       {/* Linha fina semi-transparente */}
-      <View className="h-[1px]" style={{ backgroundColor: 'rgba(115, 128, 150, 0.8)' }} />
-    </View>
+      <View style={{ height: 1, backgroundColor: 'rgba(115, 128, 150, 0.8)' }} />
+    </SafeAreaView>
   );
 }
