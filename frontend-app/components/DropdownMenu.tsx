@@ -9,7 +9,7 @@ export default function DropdownMenu({ setMenuOpen }: DropdownProps) {
   const router = useRouter();
 
   return (
-    <View className="absolute top-16 right-4 bg-gray-800 rounded shadow-lg p-2 z-50">
+<View className="absolute top-16 right-4 bg-grayDark rounded shadow-lg p-2 z-50">
       <TouchableOpacity
         className="px-4 py-2"
         onPress={() => {

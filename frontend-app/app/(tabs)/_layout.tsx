@@ -139,8 +139,8 @@ export default function HomeScreen() {
         </View>
       </View>
 
-      {/* Recomendados */}
-      <Text className="text-gray mb-2 font-bold">RECOMENDADOS</Text>
+      {/* BARBEARIAS */}
+      <Text className="text-gray mb-2 font-bold">BARBEARIAS</Text>
       <ScrollView horizontal showsHorizontalScrollIndicator={false} className="mb-16">
         {[
           { name: "Vintage Barber", address: "Avenida São Sebastião", img: sala1 },
