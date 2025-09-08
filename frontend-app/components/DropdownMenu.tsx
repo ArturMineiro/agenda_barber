@@ -9,7 +9,7 @@ export default function DropdownMenu({ setMenuOpen }: DropdownProps) {
   const router = useRouter();
 
   return (
-<View className="absolute top-16 right-4 bg-grayDark rounded shadow-lg p-2 z-50">
+    <View className="absolute top-16 right-4 bg-grayDark rounded shadow-lg p-2 z-50">
       <TouchableOpacity
         className="px-4 py-2"
         onPress={() => {
@@ -23,7 +23,7 @@ export default function DropdownMenu({ setMenuOpen }: DropdownProps) {
       <TouchableOpacity
         className="px-4 py-2"
         onPress={() => {
-          router.push("/");
+          router.push("/cadastro"); // 👉 vai para a tela de cadastro
           setMenuOpen(false);
         }}
       >
