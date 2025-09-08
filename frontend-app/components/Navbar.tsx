@@ -26,7 +26,7 @@ export default function Navbar({ menuOpen, setMenuOpen }: NavbarProps) {
           <Text className="text-white text-xl font-bold ml-2">CORTEZ</Text>
         </TouchableOpacity>
 
-        {/* Hamburger moderno */}
+        {/* Menu Hamburguer */}
         <TouchableOpacity
           onPress={() => setMenuOpen(!menuOpen)}
           className="flex-col justify-between h-4 w-6"
