@@ -32,6 +32,7 @@ export default function RootLayout() {
           <Stack.Screen name="login" />
           <Stack.Screen name="cadastro" />
           <Stack.Screen name="(tabs)" />
+          <Stack.Screen name="estabelecimentos" />
         </Stack>
       </SafeAreaView>
     </QueryClientProvider>
