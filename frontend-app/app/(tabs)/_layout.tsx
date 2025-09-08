@@ -1,5 +1,7 @@
 import { View, Text, ScrollView, TextInput, Image, TouchableOpacity } from "react-native";
 import { useRouter } from "expo-router";
+import { Feather } from '@expo/vector-icons'; // Certifique-se de importar isso
+
 
 // 📌 Imagens
 import salaopng from "../../assets/images/salao.png";
@@ -24,16 +26,28 @@ export default function HomeScreen() {
       </Text>
 
       {/* Busca */}
-      <View className="flex-row mb-4 items-center">
-        <TextInput
-          placeholder="Buscar"
-          placeholderTextColor="#888"
-          className="flex-1 bg-grayDark rounded-full px-4 py-2 text-white"
-        />
-        <TouchableOpacity className="bg-primary ml-2 px-4 py-2 rounded-full">
-          <Text className="text-white font-bold">🔍</Text>
+      <View className="flex-row items-center mb-4">
+        <View
+          className="flex-1 flex-row items-center rounded-full px-4 py-2"
+          style={{ backgroundColor: 'rgba(104, 197, 219, 0.15)' }} // primary com transparência
+        >
+          <TextInput
+            placeholder="Buscar"
+            placeholderTextColor="#ccc"
+            className="flex-1 text-white"
+          />
+        </View>
+
+        <TouchableOpacity
+          className="ml-2 p-2 rounded-full"
+          onPress={() => {
+            // lógica da busca
+          }}
+        >
+          <Feather name="search" size={20} color="#ccc" />
         </TouchableOpacity>
       </View>
+
 
       {/* Filtros */}
       <View className="flex-row justify-between mb-6">

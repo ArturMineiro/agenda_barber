@@ -1,5 +1,6 @@
 import { View, Text, TouchableOpacity, Image } from "react-native";
-import { useRouter } from "expo-router"; // ou useNavigation se estiver usando react-navigation
+import { useRouter } from "expo-router";
+import { useSafeAreaInsets } from "react-native-safe-area-context"; // ✅ IMPORTA AQUI
 import tesourapente from "../assets/images/tesoura-e-pente.png";
 
 type NavbarProps = {
@@ -8,15 +9,16 @@ type NavbarProps = {
 };
 
 export default function Navbar({ menuOpen, setMenuOpen }: NavbarProps) {
-  const router = useRouter(); // para navegação
+  const router = useRouter();
+  const insets = useSafeAreaInsets(); // ✅ USA O HOOK AQUI
 
   return (
-    <View>
+    <View style={{ paddingTop: insets.top }}> {/* ✅ APLICA O PADDING */}
       <View className="bg-black p-4 flex-row items-center justify-between">
-        {/* Logo como link */}
+        {/* Logo */}
         <TouchableOpacity
           className="flex-row items-center flex-1"
-          onPress={() => router.push("/")} // volta para a home
+          onPress={() => router.push("/")}
         >
           <Image
             source={tesourapente}
@@ -26,7 +28,7 @@ export default function Navbar({ menuOpen, setMenuOpen }: NavbarProps) {
           <Text className="text-white text-xl font-bold ml-2">CORTEZ</Text>
         </TouchableOpacity>
 
-        {/* Hamburger moderno */}
+        {/* Menu Hamburguer */}
         <TouchableOpacity
           onPress={() => setMenuOpen(!menuOpen)}
           className="flex-col justify-between h-4 w-6"
@@ -37,7 +39,6 @@ export default function Navbar({ menuOpen, setMenuOpen }: NavbarProps) {
         </TouchableOpacity>
       </View>
 
-      {/* Linha fina semi-transparente */}
       <View className="h-[1px]" style={{ backgroundColor: 'rgba(115, 128, 150, 0.8)' }} />
     </View>
   );
