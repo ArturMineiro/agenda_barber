@@ -1,7 +1,7 @@
 package com.barbearia.saas_backend.Controller;
 
-import com.barbearia.saas_backend.dto.BarberServiceDTO;
-import com.barbearia.saas_backend.dto.AssignServiceRequest;
+import com.barbearia.saas_backend.dto.request.BarberServiceRequest;
+import com.barbearia.saas_backend.dto.response.BarberServiceResponse;
 import com.barbearia.saas_backend.service.BarberServiceService;
 import org.springframework.web.bind.annotation.*;
 
@@ -18,24 +18,23 @@ public class BarberServiceController {
     }
 
     @GetMapping
-    public List<BarberServiceDTO> getAll() {
+    public List<BarberServiceResponse> getAll() {
         return barberServiceService.getAll();
     }
 
     @PostMapping
-    public BarberServiceDTO assignServiceToBarber(@RequestBody AssignServiceRequest request) {
+    public BarberServiceResponse assignServiceToBarber(@RequestBody BarberServiceRequest request) {
         return barberServiceService.assignServiceToBarber(request.getBarberId(), request.getServiceId());
+    }
+
+    @PutMapping("/{id}")
+    public BarberServiceResponse updateBarberService(@PathVariable Long id,
+                                                @RequestBody BarberServiceRequest request) {
+        return barberServiceService.updateBarberService(id, request.getBarberId(), request.getServiceId());
     }
 
     @DeleteMapping("/{id}")
     public void delete(@PathVariable Long id) {
         barberServiceService.delete(id);
     }
-    @PutMapping("/{id}")
-public BarberServiceDTO updateBarberService(
-        @PathVariable Long id,
-        @RequestBody AssignServiceRequest request) {
-    return barberServiceService.updateBarberService(id, request.getBarberId(), request.getServiceId());
-}
-
 }

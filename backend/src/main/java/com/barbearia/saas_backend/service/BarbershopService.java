@@ -1,7 +1,7 @@
 // src/main/java/com/barbearia/saas_backend/service/BarbershopService.java
 package com.barbearia.saas_backend.service;
-
-import com.barbearia.saas_backend.dto.BarbershopRequest;
+import com.barbearia.saas_backend.dto.response.BarbershopResponse;
+import com.barbearia.saas_backend.dto.request.BarbershopRequest;
 import com.barbearia.saas_backend.model.Barbershop;
 import com.barbearia.saas_backend.model.User;
 import com.barbearia.saas_backend.repository.BarbershopRepository;
@@ -20,18 +20,22 @@ public class BarbershopService {
     private final UserRepository userRepository;
 
     @Transactional(readOnly = true)
-    public List<Barbershop> findAll() {
-        return repository.findAll();
+    public List<BarbershopResponse> findAll() {
+        return repository.findAll()
+                .stream()
+                .map(this::toResponse)
+                .toList();
     }
 
     @Transactional(readOnly = true)
-    public Barbershop findById(Long id) {
-        return repository.findById(id)
+    public BarbershopResponse findById(Long id) {
+        Barbershop barbershop = repository.findById(id)
                 .orElseThrow(() -> new IllegalArgumentException("Barbershop not found: id=" + id));
+        return toResponse(barbershop);
     }
 
     @Transactional
-    public Barbershop create(BarbershopRequest request) {
+    public BarbershopResponse create(BarbershopRequest request) {
         if (repository.existsByTaxId(request.getTaxId())) {
             throw new IllegalArgumentException("taxId already in use");
         }
@@ -48,15 +52,16 @@ public class BarbershopService {
                 .address(request.getAddress())
                 .phone(request.getPhone())
                 .email(request.getEmail())
-                .owner(owner) // 🔑 vínculo com user
+                .owner(owner)
                 .build();
 
-        return repository.save(b);
+        return toResponse(repository.save(b));
     }
 
     @Transactional
-    public Barbershop update(Long id, BarbershopRequest request) {
-        Barbershop current = findById(id);
+    public BarbershopResponse update(Long id, BarbershopRequest request) {
+        Barbershop current = repository.findById(id)
+                .orElseThrow(() -> new IllegalArgumentException("Barbershop not found: id=" + id));
 
         if (!current.getTaxId().equals(request.getTaxId()) && repository.existsByTaxId(request.getTaxId())) {
             throw new IllegalArgumentException("taxId already in use");
@@ -75,11 +80,24 @@ public class BarbershopService {
         current.setEmail(request.getEmail());
         current.setOwner(owner);
 
-        return repository.save(current);
+        return toResponse(repository.save(current));
     }
 
     @Transactional
     public void delete(Long id) {
         repository.deleteById(id);
+    }
+
+    // Converter Entity -> DTO de resposta
+    private BarbershopResponse toResponse(Barbershop b) {
+        return new BarbershopResponse(
+                b.getId(),
+                b.getName(),
+                b.getTaxId(),
+                b.getAddress(),
+                b.getPhone(),
+                b.getEmail(),
+                b.getOwner() != null ? b.getOwner().getId() : null
+        );
     }
 }

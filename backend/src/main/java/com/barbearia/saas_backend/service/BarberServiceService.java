@@ -1,6 +1,6 @@
 package com.barbearia.saas_backend.service;
 
-import com.barbearia.saas_backend.dto.BarberServiceDTO;
+import com.barbearia.saas_backend.dto.response.BarberServiceResponse;
 import com.barbearia.saas_backend.model.BarberServiceEntity;
 import com.barbearia.saas_backend.model.ServiceEntity;
 import com.barbearia.saas_backend.model.User;
@@ -27,18 +27,14 @@ public class BarberServiceService {
         this.serviceRepository = serviceRepository;
     }
 
-    public List<BarberServiceDTO> getAll() {
+    public List<BarberServiceResponse> getAll() {
         return barberServiceRepository.findAll()
                 .stream()
-                .map(entity -> new BarberServiceDTO(
-                        entity.getId(),
-                        entity.getBarber().getId(),
-                        entity.getService().getId()
-                ))
+                .map(this::toDTO)
                 .collect(Collectors.toList());
     }
 
-    public BarberServiceDTO assignServiceToBarber(Long barberId, Long serviceId) {
+    public BarberServiceResponse assignServiceToBarber(Long barberId, Long serviceId) {
         User barber = userRepository.findById(barberId)
                 .orElseThrow(() -> new RuntimeException("Barber not found"));
         ServiceEntity service = serviceRepository.findById(serviceId)
@@ -51,28 +47,36 @@ public class BarberServiceService {
 
         BarberServiceEntity saved = barberServiceRepository.save(entity);
 
-        return new BarberServiceDTO(saved.getId(), barber.getId(), service.getId());
+        return toDTO(saved);
+    }
+
+    public BarberServiceResponse updateBarberService(Long id, Long barberId, Long serviceId) {
+        BarberServiceEntity entity = barberServiceRepository.findById(id)
+                .orElseThrow(() -> new RuntimeException("BarberService not found"));
+
+        User barber = userRepository.findById(barberId)
+                .orElseThrow(() -> new RuntimeException("Barber not found"));
+        ServiceEntity service = serviceRepository.findById(serviceId)
+                .orElseThrow(() -> new RuntimeException("Service not found"));
+
+        entity.setBarber(barber);
+        entity.setService(service);
+
+        BarberServiceEntity updated = barberServiceRepository.save(entity);
+
+        return toDTO(updated);
     }
 
     public void delete(Long id) {
         barberServiceRepository.deleteById(id);
     }
 
-    public BarberServiceDTO updateBarberService(Long id, Long barberId, Long serviceId) {
-        BarberServiceEntity entity = barberServiceRepository.findById(id)
-                .orElseThrow(() -> new RuntimeException("BarberService not found"));
-    
-        User barber = userRepository.findById(barberId)
-                .orElseThrow(() -> new RuntimeException("Barber not found"));
-        ServiceEntity service = serviceRepository.findById(serviceId)
-                .orElseThrow(() -> new RuntimeException("Service not found"));
-    
-        entity.setBarber(barber);
-        entity.setService(service);
-    
-        BarberServiceEntity updated = barberServiceRepository.save(entity);
-    
-        return new BarberServiceDTO(updated.getId(), barber.getId(), service.getId());
+    // Método privado para converter Entity em DTO
+    private BarberServiceResponse toDTO(BarberServiceEntity entity) {
+        return new BarberServiceResponse(
+                entity.getId(),
+                entity.getBarber().getId(),
+                entity.getService().getId()
+        );
     }
-    
 }

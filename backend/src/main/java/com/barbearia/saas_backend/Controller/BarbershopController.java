@@ -1,7 +1,7 @@
 package com.barbearia.saas_backend.Controller;
 
-import com.barbearia.saas_backend.dto.BarbershopRequest;
-import com.barbearia.saas_backend.model.Barbershop;
+import com.barbearia.saas_backend.dto.request.BarbershopRequest;
+import com.barbearia.saas_backend.dto.response.BarbershopResponse;
 import com.barbearia.saas_backend.service.BarbershopService;
 import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
@@ -19,23 +19,24 @@ public class BarbershopController {
     private final BarbershopService service;
 
     @GetMapping
-    public ResponseEntity<List<Barbershop>> getAll() {
+    public ResponseEntity<List<BarbershopResponse>> getAll() {
         return ResponseEntity.ok(service.findAll());
     }
 
     @GetMapping("/{id}")
-    public ResponseEntity<Barbershop> getById(@PathVariable Long id) {
+    public ResponseEntity<BarbershopResponse> getById(@PathVariable Long id) {
         return ResponseEntity.ok(service.findById(id));
     }
 
     @PostMapping
-    public ResponseEntity<Barbershop> create(@Valid @RequestBody BarbershopRequest request) {
-        Barbershop saved = service.create(request);
+    public ResponseEntity<BarbershopResponse> create(@Valid @RequestBody BarbershopRequest request) {
+        BarbershopResponse saved = service.create(request);
         return ResponseEntity.created(URI.create("/api/barbershops/" + saved.getId())).body(saved);
     }
 
     @PutMapping("/{id}")
-    public ResponseEntity<Barbershop> update(@PathVariable Long id, @Valid @RequestBody BarbershopRequest request) {
+    public ResponseEntity<BarbershopResponse> update(@PathVariable Long id,
+                                                     @Valid @RequestBody BarbershopRequest request) {
         return ResponseEntity.ok(service.update(id, request));
     }
 
@@ -45,3 +46,4 @@ public class BarbershopController {
         return ResponseEntity.noContent().build();
     }
 }
+
