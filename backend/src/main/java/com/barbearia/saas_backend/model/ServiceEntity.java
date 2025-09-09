@@ -20,7 +20,7 @@ public class ServiceEntity {
 
     @ManyToOne(fetch = FetchType.LAZY)
     @JoinColumn(name = "barbershop_id", nullable = false)
-    private Barbershop barbershop;
+    private BarbershopEntity barbershop;
 
     @Column(nullable = false, length = 100)
     private String name;

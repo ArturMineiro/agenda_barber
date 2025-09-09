@@ -21,7 +21,7 @@ public class BarberServiceEntity {
     // barbeiro (usuário com role BARBER)
     @ManyToOne(fetch = FetchType.LAZY)
     @JoinColumn(name = "barber_id", nullable = false)
-    private User barber;
+    private UserEntity barber;
 
     // serviço
     @ManyToOne(fetch = FetchType.LAZY)

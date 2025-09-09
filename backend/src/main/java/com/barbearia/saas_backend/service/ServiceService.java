@@ -1,7 +1,7 @@
 package com.barbearia.saas_backend.service;
 import com.barbearia.saas_backend.dto.request.ServiceRequest;
 import com.barbearia.saas_backend.dto.response.ServiceResponse;
-import com.barbearia.saas_backend.model.Barbershop;
+import com.barbearia.saas_backend.model.BarbershopEntity;
 import com.barbearia.saas_backend.model.ServiceEntity;
 import com.barbearia.saas_backend.repository.ServiceRepository;
 import org.springframework.stereotype.Service;
@@ -40,7 +40,7 @@ public class ServiceService {
     }
 
     public ServiceResponse create(ServiceRequest request) {
-        Barbershop barbershop = barbershopRepository.findById(request.getBarbershopId())
+        BarbershopEntity barbershop = barbershopRepository.findById(request.getBarbershopId())
                 .orElseThrow(() -> new RuntimeException("Barbershop not found"));
 
         ServiceEntity service = ServiceEntity.builder()
@@ -57,7 +57,7 @@ public class ServiceService {
         ServiceEntity service = serviceRepository.findById(id)
                 .orElseThrow(() -> new RuntimeException("Service not found"));
 
-        Barbershop barbershop = barbershopRepository.findById(request.getBarbershopId())
+        BarbershopEntity barbershop = barbershopRepository.findById(request.getBarbershopId())
                 .orElseThrow(() -> new RuntimeException("Barbershop not found"));
 
         service.setName(request.getName());

@@ -2,7 +2,7 @@ package com.barbearia.saas_backend.Controller;
 
 import com.barbearia.saas_backend.dto.request.UserRequest;
 import com.barbearia.saas_backend.dto.response.UserResponse;
-import com.barbearia.saas_backend.model.User;
+import com.barbearia.saas_backend.model.UserEntity;
 import com.barbearia.saas_backend.service.UserService;
 import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
@@ -37,7 +37,7 @@ public class UserController {
 
     @PostMapping
     public ResponseEntity<UserResponse> createUser(@Valid @RequestBody UserRequest request) {
-        User savedUser = userService.saveUser(request);
+        UserEntity savedUser = userService.saveUser(request);
 
         UserResponse response = new UserResponse(
                 savedUser.getId(),

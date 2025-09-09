@@ -1,6 +1,6 @@
 package com.barbearia.saas_backend.dto.response;
 
-import com.barbearia.saas_backend.model.User.UserRole;
+import com.barbearia.saas_backend.model.UserEntity.UserRole;
 import lombok.AllArgsConstructor;
 import lombok.Data;
 

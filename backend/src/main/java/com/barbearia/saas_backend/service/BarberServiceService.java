@@ -3,7 +3,7 @@ package com.barbearia.saas_backend.service;
 import com.barbearia.saas_backend.dto.response.BarberServiceResponse;
 import com.barbearia.saas_backend.model.BarberServiceEntity;
 import com.barbearia.saas_backend.model.ServiceEntity;
-import com.barbearia.saas_backend.model.User;
+import com.barbearia.saas_backend.model.UserEntity;
 import com.barbearia.saas_backend.repository.BarberServiceRepository;
 import com.barbearia.saas_backend.repository.ServiceRepository;
 import com.barbearia.saas_backend.repository.UserRepository;
@@ -35,7 +35,7 @@ public class BarberServiceService {
     }
 
     public BarberServiceResponse assignServiceToBarber(Long barberId, Long serviceId) {
-        User barber = userRepository.findById(barberId)
+        UserEntity barber = userRepository.findById(barberId)
                 .orElseThrow(() -> new RuntimeException("Barber not found"));
         ServiceEntity service = serviceRepository.findById(serviceId)
                 .orElseThrow(() -> new RuntimeException("Service not found"));
@@ -54,7 +54,7 @@ public class BarberServiceService {
         BarberServiceEntity entity = barberServiceRepository.findById(id)
                 .orElseThrow(() -> new RuntimeException("BarberService not found"));
 
-        User barber = userRepository.findById(barberId)
+        UserEntity barber = userRepository.findById(barberId)
                 .orElseThrow(() -> new RuntimeException("Barber not found"));
         ServiceEntity service = serviceRepository.findById(serviceId)
                 .orElseThrow(() -> new RuntimeException("Service not found"));

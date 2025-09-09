@@ -2,8 +2,8 @@
 package com.barbearia.saas_backend.service;
 import com.barbearia.saas_backend.dto.response.BarbershopResponse;
 import com.barbearia.saas_backend.dto.request.BarbershopRequest;
-import com.barbearia.saas_backend.model.Barbershop;
-import com.barbearia.saas_backend.model.User;
+import com.barbearia.saas_backend.model.BarbershopEntity;
+import com.barbearia.saas_backend.model.UserEntity;
 import com.barbearia.saas_backend.repository.BarbershopRepository;
 import com.barbearia.saas_backend.repository.UserRepository;
 import lombok.RequiredArgsConstructor;
@@ -29,7 +29,7 @@ public class BarbershopService {
 
     @Transactional(readOnly = true)
     public BarbershopResponse findById(Long id) {
-        Barbershop barbershop = repository.findById(id)
+        BarbershopEntity barbershop = repository.findById(id)
                 .orElseThrow(() -> new IllegalArgumentException("Barbershop not found: id=" + id));
         return toResponse(barbershop);
     }
@@ -43,10 +43,10 @@ public class BarbershopService {
             throw new IllegalArgumentException("email already in use");
         }
 
-        User owner = userRepository.findById(request.getOwnerId())
+        UserEntity owner = userRepository.findById(request.getOwnerId())
                 .orElseThrow(() -> new IllegalArgumentException("Owner user not found: id=" + request.getOwnerId()));
 
-        Barbershop b = Barbershop.builder()
+        BarbershopEntity b = BarbershopEntity.builder()
                 .name(request.getName())
                 .taxId(request.getTaxId())
                 .address(request.getAddress())
@@ -60,7 +60,7 @@ public class BarbershopService {
 
     @Transactional
     public BarbershopResponse update(Long id, BarbershopRequest request) {
-        Barbershop current = repository.findById(id)
+        BarbershopEntity current = repository.findById(id)
                 .orElseThrow(() -> new IllegalArgumentException("Barbershop not found: id=" + id));
 
         if (!current.getTaxId().equals(request.getTaxId()) && repository.existsByTaxId(request.getTaxId())) {
@@ -70,7 +70,7 @@ public class BarbershopService {
             throw new IllegalArgumentException("email already in use");
         }
 
-        User owner = userRepository.findById(request.getOwnerId())
+        UserEntity owner = userRepository.findById(request.getOwnerId())
                 .orElseThrow(() -> new IllegalArgumentException("Owner user not found: id=" + request.getOwnerId()));
 
         current.setName(request.getName());
@@ -89,7 +89,7 @@ public class BarbershopService {
     }
 
     // Converter Entity -> DTO de resposta
-    private BarbershopResponse toResponse(Barbershop b) {
+    private BarbershopResponse toResponse(BarbershopEntity b) {
         return new BarbershopResponse(
                 b.getId(),
                 b.getName(),
