@@ -8,6 +8,7 @@ import {
   rescheduleSchema,
 } from "@navalha/shared";
 import { prisma } from "../../lib/prisma";
+import { env } from "../../config/env";
 import { AppError, notFound } from "../../lib/errors";
 import { getAvailability } from "../scheduling/availability.service";
 import { createAppointment } from "../scheduling/booking.service";
@@ -32,6 +33,11 @@ async function findActiveBarbershop(slug: string) {
   }
   return barbershop;
 }
+
+/** Configuração pública da plataforma (contato do suporte) */
+publicRoutes.get("/config", (_req, res) => {
+  res.json({ supportWhatsapp: env.SUPPORT_WHATSAPP || null });
+});
 
 /** Página pública: dados de vitrine + serviços + profissionais */
 publicRoutes.get("/barbershops/:slug", async (req, res) => {

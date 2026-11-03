@@ -10,6 +10,8 @@ const envSchema = z.object({
   BILLING_GRACE_DAYS: z.coerce.number().int().min(0).default(5),
   /** Quantos proxies confiáveis na frente da API (nginx da VPS + nginx do container = 2) */
   TRUST_PROXY: z.coerce.number().int().min(0).default(1),
+  /** WhatsApp do suporte/admin mostrado aos donos (só dígitos, com DDD) */
+  SUPPORT_WHATSAPP: z.string().default("").transform((v) => v.replace(/\D/g, "")),
 });
 
 const parsed = envSchema.safeParse(process.env);

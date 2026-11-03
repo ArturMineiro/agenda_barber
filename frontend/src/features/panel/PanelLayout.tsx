@@ -1,6 +1,7 @@
 import { CalendarDays, Clock, Home, ListOrdered, Scissors, Settings, Users, UserSquare2 } from "lucide-react";
 import { AppShell, type NavItem } from "@/components/layout/AppShell";
 import { FullPageSpinner } from "@/components/ui/misc";
+import { SupportLink } from "@/lib/support";
 import { formatDateOnly, formatMoney } from "@/lib/utils";
 import type { Barbershop } from "@/types/api";
 import { useBarbershop } from "./api";
@@ -52,7 +53,8 @@ function StatusBanner({ shop }: { shop: Barbershop }) {
     tone = "bg-amber-50 text-amber-900 border-amber-200";
     text = (
       <>
-        <strong>Cadastro em análise.</strong> Configure serviços e horários enquanto isso — seu link fica no ar assim que for aprovado.
+        <strong>Cadastro em análise.</strong> Configure serviços e horários enquanto isso — seu link fica no ar assim que for aprovado.{" "}
+        <SupportLink message={`Olá! Cadastrei a barbearia "${shop.name}" no Navalha e queria liberar o acesso.`}>Pedir liberação</SupportLink>
       </>
     );
   } else if (shop.status === "SUSPENDED") {
@@ -60,17 +62,24 @@ function StatusBanner({ shop }: { shop: Barbershop }) {
     text = (
       <>
         <strong>Barbearia suspensa</strong>
-        {shop.statusReason ? ` — ${shop.statusReason}` : ""}. Seu link não está recebendo agendamentos. Fale com o suporte.
+        {shop.statusReason ? ` — ${shop.statusReason}` : ""}. Seu link não está recebendo agendamentos.{" "}
+        <SupportLink message={`Olá! Minha barbearia "${shop.name}" está suspensa no Navalha e queria regularizar.`} />
       </>
     );
   } else if (shop.status === "REJECTED") {
     tone = "bg-red-50 text-red-900 border-red-200";
-    text = <>Cadastro não aprovado{shop.statusReason ? `: ${shop.statusReason}` : ""}.</>;
+    text = (
+      <>
+        Cadastro não aprovado{shop.statusReason ? `: ${shop.statusReason}` : ""}.{" "}
+        <SupportLink message={`Olá! O cadastro da barbearia "${shop.name}" no Navalha não foi aprovado e queria entender o motivo.`} />
+      </>
+    );
   } else if (overdue) {
     tone = "bg-red-50 text-red-900 border-red-200";
     text = (
       <>
-        <strong>Mensalidade em atraso</strong> ({formatMoney(overdue.amountCents)}, venceu em {formatDateOnly(overdue.dueDate)}). Regularize para não ter o link suspenso.
+        <strong>Mensalidade em atraso</strong> ({formatMoney(overdue.amountCents)}, venceu em {formatDateOnly(overdue.dueDate)}). Regularize para não ter o link suspenso.{" "}
+        <SupportLink message={`Olá! Quero pagar a mensalidade da barbearia "${shop.name}" no Navalha.`}>Pagar com o suporte</SupportLink>
       </>
     );
   } else if (pending) {

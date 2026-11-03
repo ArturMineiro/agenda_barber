@@ -14,6 +14,7 @@ import {
   workingHoursSchema,
 } from "@navalha/shared";
 import { prisma } from "../../lib/prisma";
+import { env } from "../../config/env";
 import { badRequest, conflict, forbidden, notFound } from "../../lib/errors";
 import { startOfDayInZone } from "../../lib/time";
 import { loadOwnerBarbershop, requireAuth, requireRole } from "../../middlewares/auth";
@@ -175,7 +176,7 @@ async function assertProfessionalLimit(req: Request, excludeId?: string) {
   });
   if (active >= max) {
     throw forbidden(
-      `Seu plano permite ${max} profissional(is) ativo(s). Fale com o suporte para fazer upgrade.`,
+      `Seu plano permite ${max} profissional(is) ativo(s). Fale com o suporte${supportSuffix()} para fazer upgrade.`,
     );
   }
 }
@@ -388,3 +389,10 @@ panelRoutes.get("/clients", async (req, res) => {
 
   res.json([...byPhone.values()].sort((a, b) => b.lastVisit.getTime() - a.lastVisit.getTime()).slice(0, 100));
 });
+
+/** " no WhatsApp (21) 96735-5884" quando o número do suporte está configurado */
+function supportSuffix() {
+  const d = env.SUPPORT_WHATSAPP;
+  if (d.length === 11) return ` no WhatsApp (${d.slice(0, 2)}) ${d.slice(2, 7)}-${d.slice(7)}`;
+  return d ? ` no WhatsApp ${d}` : "";
+}

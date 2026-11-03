@@ -9,6 +9,7 @@ import { Field, Input } from "@/components/ui/input";
 import { ApiError, errorMessage } from "@/lib/api";
 import { cn, maskPhone } from "@/lib/utils";
 import { AuthLayout } from "./AuthLayout";
+import { SupportLink } from "@/lib/support";
 import { checkSlug, useRegister } from "./api";
 
 const TEAM_OPTIONS: { value: TeamType; title: string; text: string; icon: typeof User }[] = [
@@ -233,6 +234,11 @@ export function RegisterPage() {
             </div>
             <p className="text-center text-xs text-zinc-500">
               Sua barbearia passa por uma aprovação rápida. Enquanto isso, você já pode configurar tudo.
+            </p>
+            <p className="text-center text-xs text-zinc-500">
+              <SupportLink message="Olá! Estou me cadastrando no Navalha e tenho uma dúvida." showNumber>
+                Dúvidas? Fale com a gente
+              </SupportLink>
             </p>
           </div>
         )}

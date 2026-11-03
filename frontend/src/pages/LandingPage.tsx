@@ -3,6 +3,7 @@ import { Bell, CalendarCheck, Check, Link2, Palette, Smartphone, User, Users } f
 import { APP_NAME } from "@navalha/shared";
 import { Logo } from "@/components/Logo";
 import { buttonVariants } from "@/components/ui/button";
+import { SupportLink } from "@/lib/support";
 import { cn } from "@/lib/utils";
 
 const FEATURES = [
@@ -140,6 +141,11 @@ export function LandingPage() {
         <Link to="/cadastro" className={cn(buttonVariants({ size: "lg" }), "mt-8")}>
           Criar minha conta
         </Link>
+        <p className="mt-5 text-sm text-zinc-500">
+          <SupportLink message="Olá! Quero saber mais sobre o Navalha para minha barbearia." showNumber className="text-zinc-700">
+            Prefere conversar? Chama no WhatsApp
+          </SupportLink>
+        </p>
       </section>
 
       <footer className="border-t border-zinc-100 py-8 text-center text-sm text-zinc-400">
