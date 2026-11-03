@@ -22,6 +22,8 @@ RUN npm run build -w backend
 # ---------- produção ----------
 FROM manifests AS prod
 ENV NODE_ENV=production
+# fontes para o texto das imagens de prévia de link (o alpine não traz nenhuma)
+RUN apk add --no-cache fontconfig font-inter ttf-dejavu && fc-cache -f
 RUN npm ci --omit=dev -w backend && npm cache clean --force
 COPY --from=build /app/backend/dist backend/dist
 WORKDIR /app/backend

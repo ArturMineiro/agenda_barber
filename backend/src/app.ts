@@ -9,6 +9,7 @@ import { panelRoutes } from "./modules/panel/panel.routes";
 import { publicRoutes } from "./modules/public/public.routes";
 import { uploadRoutes } from "./modules/uploads/uploads.routes";
 import { queueRoutes } from "./modules/queue/queue.routes";
+import { ogRoutes } from "./modules/og/og.routes";
 import { UPLOAD_DIR } from "./modules/uploads/uploads.service";
 import { errorHandler, notFoundHandler } from "./middlewares/error-handler";
 
@@ -38,6 +39,7 @@ export function createApp() {
   app.use("/api/panel/queue", queueRoutes); // fila por ordem de chegada
   app.use("/api/panel", panelRoutes); // dono da barbearia
   app.use("/api/public", publicRoutes); // página pública + agendamento
+  app.use("/api/og", ogRoutes); // prévia de links (WhatsApp, Instagram…)
 
   app.use(notFoundHandler);
   app.use(errorHandler);
