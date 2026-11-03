@@ -1,0 +1,84 @@
+# Testa todo push e PR; na main, se tudo passar, publica na VPS.
+name: CI/CD
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+  workflow_dispatch:
+
+concurrency:
+  group: ci-cd-${{ github.ref }}
+  cancel-in-progress: false
+
+jobs:
+  check:
+    name: Tipos e build (API + site)
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+      - run: npm ci
+      - name: Tipos
+        run: npm run typecheck
+      - name: Build
+        run: npm run build
+
+  docker:
+    name: Imagens Docker
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: Build das imagens de produção
+        run: |
+          docker build -f backend/Dockerfile --target prod -t navalha-api:ci .
+          docker build -f frontend/Dockerfile --target prod -t navalha-web:ci .
+
+  deploy:
+    name: Publicar na VPS
+    needs: [check, docker]
+    if: github.event_name != 'pull_request' && github.ref == 'refs/heads/main'
+    runs-on: ubuntu-latest
+    environment:
+      name: production
+      url: https://navalha.forgedevapps.com
+    env:
+      APP_DIR: /opt/navalha
+      SITE_URL: https://navalha.forgedevapps.com
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Chave SSH
+        run: |
+          install -m 700 -d ~/.ssh
+          echo "${{ secrets.VPS_SSH_KEY }}" > ~/.ssh/deploy
+          chmod 600 ~/.ssh/deploy
+          ssh-keyscan -p "${{ secrets.VPS_PORT || 22 }}" "${{ secrets.VPS_HOST }}" >> ~/.ssh/known_hosts
+
+      - name: Enviar código
+        # o .env de produção e as imagens enviadas ficam só no servidor e não são tocados
+        run: |
+          rsync -az --delete \
+            --exclude .git --exclude node_modules --exclude '**/node_modules' \
+            --exclude dist --exclude '**/dist' --exclude .env --exclude '**/.env' \
+            --exclude backend/uploads \
+            -e "ssh -i ~/.ssh/deploy -p ${{ secrets.VPS_PORT || 22 }}" \
+            ./ "${{ secrets.VPS_USER }}@${{ secrets.VPS_HOST }}:$APP_DIR/"
+
+      - name: Subir containers
+        # as migrações do banco rodam sozinhas quando a API inicia
+        run: |
+          ssh -i ~/.ssh/deploy -p "${{ secrets.VPS_PORT || 22 }}" \
+            "${{ secrets.VPS_USER }}@${{ secrets.VPS_HOST }}" \
+            "cd $APP_DIR && docker compose -f docker-compose.prod.yml up -d --build --remove-orphans && docker image prune -f"
+
+      - name: Conferir se o site respondeu
+        run: |
+          for i in $(seq 1 30); do
+            if curl -fsS "$SITE_URL/api/health" > /dev/null; then echo "No ar: $SITE_URL"; exit 0; fi
+            sleep 5
+          done
+          echo "O site não respondeu em $SITE_URL/api/health" && exit 1
