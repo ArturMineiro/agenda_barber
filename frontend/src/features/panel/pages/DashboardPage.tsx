@@ -1,5 +1,5 @@
 import { Link } from "react-router-dom";
-import { ArrowRight, CalendarDays, CheckCircle2, Circle, DollarSign, ListOrdered, TrendingUp } from "lucide-react";
+import { ArrowRight, Ban, CalendarDays, CheckCircle2, Circle, Clock, DollarSign, ListOrdered, Pencil, TrendingUp } from "lucide-react";
 import { EmptyState, PageHeader, Skeleton, StatCard } from "@/components/ui/misc";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { useMe } from "@/features/auth/api";
@@ -8,6 +8,7 @@ import { cn, formatDuration, formatMoney } from "@/lib/utils";
 import { useBarbershop, useDashboard, useProfessionals, useQueue, useServices } from "../api";
 import { AppointmentCard } from "../components/AppointmentCard";
 import { ShareLinkCard } from "../components/ShareLinkCard";
+import { hoursSummary, weekSchedule } from "../components/HoursEditor";
 
 function greeting() {
   const h = new Date().getHours();
@@ -48,6 +49,8 @@ export function DashboardPage() {
           </>
         )}
       </div>
+
+      {!queueMode && <WorkScheduleCard />}
 
       {queueMode ? <QueueSummary /> : (
       <section>
@@ -146,6 +149,55 @@ function Onboarding() {
             <ArrowRight className="size-4 text-zinc-400" />
           </Link>
         ))}
+      </CardContent>
+    </Card>
+  );
+}
+
+/** Expediente sempre visível no início: fácil de achar onde muda horário e folga */
+function WorkScheduleCard() {
+  const { data: shop } = useBarbershop();
+  const { data: pros } = useProfessionals();
+  const active = pros?.filter((p) => p.active) ?? [];
+  if (!shop || !active.length) return null;
+  const solo = active.length === 1;
+
+  return (
+    <Card>
+      <CardHeader>
+        <div className="flex items-center gap-2">
+          <Clock className="size-4 text-zinc-400" />
+          <CardTitle>{solo ? "Seu expediente" : "Expediente da equipe"}</CardTitle>
+        </div>
+      </CardHeader>
+      <CardContent className="space-y-4">
+        {solo ? (
+          <ul className="divide-y divide-zinc-100 text-sm">
+            {weekSchedule(active[0]!.workingHours).map((g) => (
+              <li key={g.days} className="flex items-center justify-between gap-3 py-2">
+                <span className="font-medium text-zinc-700">{g.days}</span>
+                <span className={cn("text-right tabular-nums", g.hours ? "text-zinc-900" : "text-zinc-400")}>{g.hours ?? "Folga"}</span>
+              </li>
+            ))}
+          </ul>
+        ) : (
+          <ul className="divide-y divide-zinc-100 text-sm">
+            {active.map((p) => (
+              <li key={p.id} className="flex items-center justify-between gap-3 py-2">
+                <span className="font-medium text-zinc-700">{p.name}</span>
+                <span className="text-right text-zinc-500">{hoursSummary(p.workingHours)}</span>
+              </li>
+            ))}
+          </ul>
+        )}
+        <div className="grid grid-cols-2 gap-2">
+          <Link to="/painel/equipe" className="inline-flex h-10 items-center justify-center gap-2 rounded-xl bg-zinc-900 text-sm font-medium text-white hover:bg-zinc-800">
+            <Pencil className="size-4" /> Editar horários
+          </Link>
+          <Link to="/painel/equipe?folga=1" className="inline-flex h-10 items-center justify-center gap-2 rounded-xl border border-zinc-200 text-sm font-medium hover:bg-zinc-50">
+            <Ban className="size-4" /> Marcar folga
+          </Link>
+        </div>
       </CardContent>
     </Card>
   );

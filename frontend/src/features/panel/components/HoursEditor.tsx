@@ -84,7 +84,7 @@ export function HoursEditor({ value, onChange }: Props) {
                 </button>
               </div>
             ) : (
-              <p className="mt-1 text-xs text-zinc-400">Fechado</p>
+              <p className="mt-1 text-xs text-zinc-400">Folga — fechado nesse dia</p>
             )}
           </div>
         );
@@ -93,11 +93,37 @@ export function HoursEditor({ value, onChange }: Props) {
   );
 }
 
-/** Resumo curto: "Seg–Sáb · 09:00–19:00" */
+/** Resumo curto: "6 dias por semana · 09:00–19:00" */
 export function hoursSummary(hours: WorkingHour[]) {
   if (!hours.length) return "Sem horários definidos";
   const days = [...new Set(hours.map((h) => h.weekday))].length;
   const start = Math.min(...hours.map((h) => h.startMinute));
   const end = Math.max(...hours.map((h) => h.endMinute));
   return `${days} dia(s) por semana · ${minutesToTime(start)}–${minutesToTime(end)}`;
+}
+
+/**
+ * Expediente agrupado por dias iguais, para leitura rápida:
+ *   [{ days: "Seg a Sex", hours: "09:00–12:00 · 13:00–19:00" }, { days: "Sáb", hours: "09:00–14:00" }, { days: "Dom", hours: null }]
+ */
+export function weekSchedule(hours: WorkingHour[]) {
+  const SHORT = ["Dom", "Seg", "Ter", "Qua", "Qui", "Sex", "Sáb"];
+  const keyOf = (d: number) =>
+    hours
+      .filter((h) => h.weekday === d)
+      .sort((a, b) => a.startMinute - b.startMinute)
+      .map((h) => `${minutesToTime(h.startMinute)}–${minutesToTime(h.endMinute)}`)
+      .join(" · ");
+
+  const groups: { from: number; to: number; key: string }[] = [];
+  for (const d of ORDER) {
+    const key = keyOf(d);
+    const last = groups[groups.length - 1];
+    if (last && last.key === key && ORDER.indexOf(d) === ORDER.indexOf(last.to) + 1) last.to = d;
+    else groups.push({ from: d, to: d, key });
+  }
+  return groups.map((g) => ({
+    days: g.from === g.to ? SHORT[g.from]! : `${SHORT[g.from]} a ${SHORT[g.to]}`,
+    hours: g.key || null,
+  }));
 }

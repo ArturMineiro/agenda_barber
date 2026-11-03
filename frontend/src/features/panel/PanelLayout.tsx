@@ -8,10 +8,11 @@ import { useBarbershop } from "./api";
 const NAV: NavItem[] = [
   { to: "/painel", label: "Início", icon: Home, end: true, mobile: true },
   { to: "/painel/agenda", label: "Agenda", icon: CalendarDays, mobile: true },
+  { to: "/painel/equipe", label: "Equipe", icon: Users, mobile: true },
   { to: "/painel/servicos", label: "Serviços", icon: Scissors, mobile: true },
-  { to: "/painel/equipe", label: "Equipe", icon: Users },
-  { to: "/painel/clientes", label: "Clientes", icon: UserSquare2, mobile: true },
-  { to: "/painel/configuracoes", label: "Ajustes", icon: Settings, mobile: true },
+  // no celular, os itens abaixo ficam em "Mais"
+  { to: "/painel/clientes", label: "Clientes", icon: UserSquare2 },
+  { to: "/painel/configuracoes", label: "Ajustes", icon: Settings },
 ];
 
 export function PanelLayout() {

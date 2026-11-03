@@ -1,4 +1,5 @@
 import * as React from "react";
+import { useSearchParams } from "react-router-dom";
 import { Ban, CalendarOff, Clock, Pencil, Plus, Trash2, Users } from "lucide-react";
 import { professionalSchema, workingHoursSchema } from "@navalha/shared";
 import { Button } from "@/components/ui/button";
@@ -112,7 +113,10 @@ function SoloHours({ pro }: { pro: Professional }) {
   return (
     <div className="space-y-8">
       <div>
-        <PageHeader title="Horários" description="Quando você atende. Os clientes só veem horários dentro desses intervalos." />
+        <PageHeader
+          title="Horários e folgas"
+          description="Defina a hora que abre e fecha em cada dia. Desligue o dia para folga fixa (ex.: domingo). Para uma folga só numa data, use “Marcar folga” abaixo."
+        />
         <Card>
           <CardContent>
             <HoursEditor value={hours} onChange={setHours} />
@@ -256,7 +260,9 @@ function TimeOffSection({ pros }: { pros: Professional[] }) {
   const { data: offs } = useTimeOffs();
   const create = useCreateTimeOff();
   const remove = useDeleteTimeOff();
-  const [open, setOpen] = React.useState(false);
+  // atalho "Marcar folga" do início do painel: /painel/equipe?folga=1 já abre o formulário
+  const [params] = useSearchParams();
+  const [open, setOpen] = React.useState(() => params.get("folga") === "1");
   const today = toDateKey(new Date());
   const [f, setF] = React.useState({ professionalId: "", date: today, allDay: true, start: "12:00", end: "13:00", reason: "" });
 
@@ -277,11 +283,11 @@ function TimeOffSection({ pros }: { pros: Professional[] }) {
     <Card>
       <CardHeader>
         <div>
-          <CardTitle>Bloqueios de agenda</CardTitle>
-          <p className="mt-0.5 text-sm text-zinc-500">Folgas, feriados ou compromissos.</p>
+          <CardTitle>Folgas e bloqueios</CardTitle>
+          <p className="mt-0.5 text-sm text-zinc-500">Folga numa data, feriado, férias ou compromisso. Ninguém agenda nesses horários.</p>
         </div>
         <Button size="sm" variant="outline" onClick={() => setOpen(true)}>
-          <Ban /> Bloquear
+          <Ban /> Marcar folga
         </Button>
       </CardHeader>
       <CardContent>
@@ -313,14 +319,14 @@ function TimeOffSection({ pros }: { pros: Professional[] }) {
       <Dialog
         open={open}
         onClose={() => setOpen(false)}
-        title="Bloquear horário"
+        title="Marcar folga ou bloqueio"
         footer={
           <>
             <Button variant="outline" onClick={() => setOpen(false)} className="flex-1 sm:flex-none">
               Cancelar
             </Button>
             <Button onClick={submit} loading={create.isPending} className="flex-1 sm:flex-none">
-              Bloquear
+              Salvar folga
             </Button>
           </>
         }

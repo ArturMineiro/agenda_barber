@@ -1,6 +1,7 @@
 import * as React from "react";
-import { NavLink, Outlet, useNavigate } from "react-router-dom";
-import { LogOut, type LucideIcon } from "lucide-react";
+import { NavLink, Outlet, useLocation, useNavigate } from "react-router-dom";
+import { LogOut, Menu, type LucideIcon } from "lucide-react";
+import { Dialog } from "@/components/ui/dialog";
 import { Logo } from "@/components/Logo";
 import { Avatar } from "@/components/ui/misc";
 import { useLogout, useMe } from "@/features/auth/api";
@@ -11,7 +12,7 @@ export interface NavItem {
   label: string;
   icon: LucideIcon;
   end?: boolean;
-  /** aparece na barra inferior do celular (máx. 5) */
+  /** aparece na barra inferior do celular (máx. 4; o resto vai para "Mais") */
   mobile?: boolean;
 }
 
@@ -32,6 +33,10 @@ export function AppShell({ nav, header, banner }: AppShellProps) {
   const logout = useLogout();
   const navigate = useNavigate();
   const mobileNav = nav.filter((n) => n.mobile);
+  const moreNav = nav.filter((n) => !n.mobile);
+  const [moreOpen, setMoreOpen] = React.useState(false);
+  const location = useLocation();
+  const moreActive = moreNav.some((n) => location.pathname.startsWith(n.to));
 
   const handleLogout = () => logout.mutate(undefined, { onSuccess: () => navigate("/entrar") });
 
@@ -115,8 +120,48 @@ export function AppShell({ nav, header, banner }: AppShellProps) {
               )}
             </NavLink>
           ))}
+          {moreNav.length > 0 && (
+            <button
+              onClick={() => setMoreOpen(true)}
+              className={cn(
+                "flex min-w-14 flex-col items-center gap-0.5 rounded-xl px-2 py-1 text-[11px] font-medium transition",
+                moreActive ? "text-zinc-900" : "text-zinc-400",
+              )}
+            >
+              <span className={cn("rounded-full px-4 py-1 transition", moreActive && "bg-zinc-900 text-white")}>
+                <Menu className="size-5" />
+              </span>
+              Mais
+            </button>
+          )}
         </div>
       </nav>
+
+      {/* "Mais" no celular: o que não coube na barra */}
+      <Dialog open={moreOpen} onClose={() => setMoreOpen(false)} title="Mais opções">
+        <div className="-mx-2 space-y-1">
+          {moreNav.map((item) => (
+            <NavLink
+              key={item.to}
+              to={item.to}
+              end={item.end}
+              onClick={() => setMoreOpen(false)}
+              className={({ isActive }) =>
+                cn(
+                  "flex items-center gap-3 rounded-xl px-3 py-3.5 text-base font-medium transition",
+                  isActive ? "bg-zinc-900 text-white" : "text-zinc-700 hover:bg-zinc-100",
+                )
+              }
+            >
+              <item.icon className="size-5" />
+              {item.label}
+            </NavLink>
+          ))}
+          <button onClick={handleLogout} className="flex w-full items-center gap-3 rounded-xl px-3 py-3.5 text-base font-medium text-red-600 hover:bg-red-50">
+            <LogOut className="size-5" /> Sair
+          </button>
+        </div>
+      </Dialog>
     </div>
   );
 }
