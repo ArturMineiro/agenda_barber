@@ -1,80 +1,154 @@
-💈 Agenda Barber
+# ✂️ Navalha
 
-Agenda Barber é um sistema web para gerenciamento de agendamentos de barbeiros, permitindo controle de horários, clientes e serviços de forma prática e eficiente.
+Agenda online para barbearias, no modelo **SaaS multi-tenant**: uma plataforma única onde cada barbearia tem seu próprio link de agendamento (`navalha.app/barbearia-do-ze`), sua página personalizada e seu painel de gestão.
 
-📌 Funcionalidades
+> "Navalha" é um nome provisório. Para trocar, altere `APP_NAME` em `packages/shared/src/enums.ts`.
 
-Cadastro de clientes e barbeiros.
+## Como funciona
 
-Criação, edição e exclusão de agendamentos.
+| Perfil | O que faz |
+| --- | --- |
+| **Super admin** (dono da plataforma) | Aprova ou recusa novas barbearias, atribui o plano e o valor da mensalidade, dá baixa nos pagamentos, suspende/reativa. |
+| **Dono da barbearia** | Se cadastra (solo ou com equipe), configura serviços, profissionais, horários e bloqueios, personaliza a página (cores, logo, capa, descrição) e gerencia a agenda. |
+| **Cliente** | Abre o link, escolhe serviço → profissional → dia → horário e confirma com nome + WhatsApp. Não precisa criar conta. |
 
-Visualização de agenda diária, semanal e mensal.
+### Dois modos de atendimento
 
-Notificações de agendamentos futuros.
+Cada barbearia escolhe (no cadastro ou em Ajustes) **um** dos modos:
 
-Painel administrativo para gerenciamento de usuários e serviços.
+- **Horário marcado** — agenda online: o cliente escolhe dia e horário pelo link.
+- **Ordem de chegada** — fila presencial, **uma fila por barbeiro**. O barbeiro adiciona quem chegou e usa *Chamar próximo → Concluir / Não veio*; pode abrir e fechar a própria fila. O link público não deixa entrar na fila: mostra o movimento de cada barbeiro (quantos esperam e a espera estimada, sem nomes) e o botão *Como chegar*. A espera é calculada pelo tempo restante de quem está na cadeira mais a duração dos serviços de quem espera.
 
-Sistema responsivo, acessível de desktop e mobile.
+### Fluxo de aprovação e cobrança
 
-🛠️ Tecnologias e Stacks Utilizadas
+1. O dono se cadastra → barbearia fica **PENDENTE**. Ele já pode configurar tudo, mas o link público ainda não recebe agendamentos.
+2. O super admin aprova, escolhendo **plano**, **valor** (negociável), **dia de vencimento** e **dias de cortesia** → barbearia **ATIVA**.
+3. A rotina de cobrança (roda ao subir a API e de hora em hora) gera a mensalidade 7 dias antes do vencimento.
+4. Venceu e não pagou → cobrança **ATRASADA**. Passou da tolerância (`BILLING_GRACE_DAYS`, padrão 5 dias) → barbearia **SUSPENSA** automaticamente.
+5. O admin dá baixa no pagamento → se não houver outras pendências, a barbearia é **reativada sozinha**.
 
-O projeto utiliza uma stack moderna e escalável:
+O limite de profissionais ativos vem do plano (Solo = 1, Equipe = 5, Premium = ilimitado — editáveis no painel).
 
-⚡ Front-end
+## Stack
 
-React → Biblioteca JavaScript para criação de interfaces de usuário.
+| Camada | Tecnologias |
+| --- | --- |
+| Frontend | React 19, Vite, TypeScript, Tailwind CSS v4, TanStack React Query, React Hook Form, React Router, Sonner, Lucide |
+| Backend | Node.js 22, Express 5, TypeScript, Prisma ORM, JWT em cookie httpOnly, bcrypt, Luxon (fuso horário) |
+| Validação | **Zod** — os mesmos schemas validam o formulário no front e a requisição no back (`packages/shared`) |
+| Banco | PostgreSQL 16 (via Docker) |
 
-Vite → Bundler rápido para desenvolvimento com React.
+## Estrutura
 
-TypeScript → Superset de JavaScript com tipagem estática.
+```
+.
+├── packages/shared/        # Schemas Zod + enums usados pelo front E pelo back
+│   └── src/schemas/        # auth, barbershop, catalog, booking, admin
+├── backend/
+│   ├── prisma/
+│   │   ├── schema.prisma   # Modelo de dados
+│   │   ├── migrations/
+│   │   └── seed.ts         # Super admin + planos
+│   └── src/
+│       ├── config/         # Variáveis de ambiente (validadas com Zod)
+│       ├── lib/            # prisma, auth (JWT/cookie), erros, datas
+│       ├── middlewares/    # requireAuth, requireRole, loadOwnerBarbershop, error-handler
+│       └── modules/
+│           ├── auth/       # cadastro, login, logout, /me, checagem de link
+│           ├── admin/      # aprovação, planos, mensalidades (SUPER_ADMIN)
+│           ├── panel/      # painel do dono (OWNER)
+│           ├── public/     # página pública + agendamento (sem login)
+│           ├── scheduling/ # cálculo de horários livres + criação de agendamento
+│           ├── queue/      # fila por ordem de chegada
+│           └── billing/    # geração de cobranças, atraso, suspensão
+├── frontend/
+│   └── src/
+│       ├── components/     # UI reutilizável (ui/), layout, DateStrip
+│       ├── features/       # Organizado por domínio: auth, panel, admin, public
+│       │   └── <feature>/  # api.ts (hooks React Query) + pages/ + components/
+│       ├── lib/            # cliente HTTP, React Query, utilitários
+│       ├── pages/          # Landing, 404
+│       └── types/          # Tipos das respostas da API
+└── docker-compose.yml      # PostgreSQL
+```
 
-Twind → CSS-in-JS com classes utilitárias (alternativa ao Tailwind).
+## Rodando localmente
 
-React Query (@tanstack/react-query) → Gerenciamento de dados assíncronos (fetch, cache, sincronização).
+Pré-requisitos: **Node 22+** e **Docker**.
 
-Zod → Validação e tipagem dos dados vindos da API.
+```bash
+# 1. Dependências (instala os 3 workspaces)
+npm install
 
-Shadcn/UI → Biblioteca de componentes de UI acessíveis e prontos para uso.
+# 2. Banco
+npm run db:up
 
-⚙️ Back-end
+# 3. Variáveis de ambiente
+cp backend/.env.example backend/.env
 
-Spring Boot (Groovy) → Framework Java/Groovy para construção de APIs RESTful.
+# 4. Tabelas + dados iniciais
+npm run db:migrate -w backend
+npm run db:seed -w backend
 
-Gradle → Sistema de build e gerenciamento de dependências.
+# 5. API (http://localhost:3333) + Web (http://localhost:5173)
+npm run dev
+```
 
-Spring Security → Autenticação e autorização de usuários.
+Login do super admin criado pelo seed: `admin@navalha.app` / `admin12345` (mude em `backend/.env`).
 
-🗄️ Banco de Dados
+### Scripts úteis
 
-MySQL ou PostgreSQL → Sistema de gerenciamento de banco de dados relacional.
+| Comando | O que faz |
+| --- | --- |
+| `npm run dev` | Sobe API e frontend juntos |
+| `npm run typecheck` | Checa tipos do back e do front |
+| `npm run build` | Build de produção dos dois |
+| `npm run db:studio -w backend` | Abre o Prisma Studio para ver/editar o banco |
+| `npm run db:migrate -w backend` | Cria/aplica migrations após mudar o `schema.prisma` |
 
-Estrutura de tabelas para usuários, agendamentos, serviços e logs de atividades.
+## Rotas principais
 
-🔧 Ferramentas e Complementos
+**Frontend**
 
-Git & GitHub → Controle de versão.
+| Rota | Tela |
+| --- | --- |
+| `/` | Landing page |
+| `/cadastro`, `/entrar` | Cadastro do dono / login |
+| `/painel/*` | Painel do dono: início, agenda, serviços, equipe/horários, clientes, ajustes |
+| `/admin/*` | Super admin: visão geral, barbearias, mensalidades, planos |
+| `/:slug` | Página pública de agendamento da barbearia |
 
-VSCode / IntelliJ IDEA → IDEs recomendadas para desenvolvimento.
+**API** (`/api`)
 
-Postman / Insomnia → Teste e documentação de APIs.
+| Prefixo | Acesso |
+| --- | --- |
+| `/auth` | Público (cadastro/login) |
+| `/public/barbershops/:slug` | Público — vitrine, horários livres, agendar |
+| `/panel` | Dono logado |
+| `/admin` | Super admin |
 
-npm → Gerenciador de pacotes para front-end.
+### Cliente gerencia o próprio agendamento
 
-📁 Estrutura do Projeto
-frontend/                # Código front-end React + Vite
-  ├─ src/
-  │   ├─ components/     # Componentes React e UI (Shadcn)
-  │   ├─ hooks/          # React Query + Zod validation
-  │   ├─ service/        # Serviços para consumo da API
-  │   ├─ schemas/        # Schemas Zod
-  │   ├─ pages/          # Páginas do sistema
-  │   ├─ App.tsx         # Componente principal
-  │   └─ main.tsx        # Entry point do Vite
+Cada agendamento tem um **link secreto** (`/agendamento/<token>`), mostrado na confirmação e salvo no aparelho (aparece em "Seus agendamentos" na página da barbearia). Por ele o cliente **vê, remarca ou cancela** sem criar conta, até o prazo definido pelo dono em Ajustes (padrão: 2h antes).
 
-backend/                 # Código back-end Spring Boot (Groovy + Gradle)
-  ├─ src/
-  │   ├─ main/
-  │   │   ├─ groovy/     # Código da aplicação (controllers, services, models)
-  │   │   ├─ resources/  # application.yml, templates, arquivos estáticos
-  │   └─ test/           # Testes unitários
-  └─ build.gradle        # Configuração do Gradle
+O dono pode **desmarcar com motivo** e avisar o cliente, além de enviar **mensagens prontas** (confirmação, lembrete, atraso) — o WhatsApp abre com o texto e o link já preenchidos; envio 100% automático exigiria a API paga do WhatsApp Business.
+
+## Decisões importantes
+
+- **Agendamento sem conta para o cliente**: menos atrito; ele informa nome e WhatsApp. O histórico de clientes é agrupado pelo telefone.
+- **Sem agendamento duplo**: a criação roda numa transação `SERIALIZABLE`; se dois clientes tentarem o mesmo horário ao mesmo tempo, só um consegue.
+- **Fuso horário**: horários são guardados em UTC e calculados no fuso da barbearia (`America/Sao_Paulo` por padrão).
+- **Dinheiro em centavos** (inteiro) para não ter erro de arredondamento.
+- **Imagens leves**: o navegador reduz a foto antes de enviar e o servidor recorta no tamanho de uso e converte para WebP (logo 400px, capa 1600×600, foto 320px). Ficam em `backend/uploads/<barbearia>/` e são servidas em `/uploads` com cache longo.
+- **Paletas de cores**: 10 combinações prontas (cor principal + cor de apoio) em `packages/shared/src/themes.ts`, mais a opção personalizada.
+- **Sessão em cookie httpOnly**: o JavaScript da página não acessa o token.
+
+## Próximos passos sugeridos
+
+- [ ] Mover as imagens de `backend/uploads` para um storage (S3/Cloudflare R2) no deploy
+- [ ] Lembretes automáticos por WhatsApp/e-mail
+- [ ] Link para o cliente cancelar/remarcar
+- [ ] Pagamento da mensalidade por gateway (Pix automático/Asaas/Mercado Pago/Stripe) em vez de baixa manual
+- [ ] Login para profissionais da equipe verem só a própria agenda
+- [ ] Relatórios (faturamento por profissional, serviços mais vendidos)
+- [ ] PWA (instalar no celular como app)

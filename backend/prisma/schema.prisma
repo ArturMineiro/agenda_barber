@@ -1,0 +1,336 @@
+// Navalha — modelo de dados
+// Multi-tenant: tudo que pertence a uma barbearia carrega barbershopId.
+// Valores em dinheiro em centavos (Int). Datas/horas de agendamento em UTC (timestamptz).
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+enum Role {
+  SUPER_ADMIN // dono da plataforma
+  OWNER // dono de barbearia
+  BARBER // profissional com login (futuro)
+  CLIENT // cliente com login (futuro)
+}
+
+enum BarbershopStatus {
+  PENDING // aguardando aprovação do super admin
+  ACTIVE
+  SUSPENDED // mensalidade atrasada ou bloqueio manual
+  REJECTED
+}
+
+enum TeamType {
+  SOLO
+  TEAM
+}
+
+/// Como a barbearia atende
+enum BookingMode {
+  SCHEDULE // agenda com horário marcado
+  QUEUE // ordem de chegada (fila presencial por barbeiro)
+}
+
+enum QueueStatus {
+  WAITING
+  IN_SERVICE
+  DONE
+  NO_SHOW
+  CANCELED
+}
+
+enum SubscriptionStatus {
+  TRIAL
+  ACTIVE
+  PAST_DUE
+  CANCELED
+}
+
+enum PaymentStatus {
+  PENDING
+  PAID
+  OVERDUE
+  CANCELED
+}
+
+enum AppointmentStatus {
+  CONFIRMED
+  CANCELED
+  COMPLETED
+  NO_SHOW
+}
+
+model User {
+  id           String   @id @default(cuid())
+  name         String
+  email        String   @unique
+  phone        String?
+  passwordHash String
+  role         Role
+  createdAt    DateTime @default(now())
+  updatedAt    DateTime @updatedAt
+
+  barbershops  Barbershop[]
+  professional Professional?
+
+  @@map("users")
+}
+
+model Plan {
+  id               String   @id @default(cuid())
+  name             String
+  description      String?
+  priceCents       Int
+  /// null = ilimitado
+  maxProfessionals Int?
+  active           Boolean  @default(true)
+  createdAt        DateTime @default(now())
+  updatedAt        DateTime @updatedAt
+
+  subscriptions Subscription[]
+
+  @@map("plans")
+}
+
+model Barbershop {
+  id          String           @id @default(cuid())
+  ownerId     String
+  slug        String           @unique
+  name        String
+  status      BarbershopStatus @default(PENDING)
+  teamType    TeamType
+  bookingMode BookingMode      @default(SCHEDULE)
+  description String?
+  phone       String?
+  whatsapp    String?
+  instagram   String?
+  address     String?
+  city        String?
+  logoUrl     String?
+  coverUrl    String?
+  primaryColor   String       @default("#b45309")
+  /// cor de apoio: fundo do topo, logo sem imagem
+  secondaryColor String       @default("#1c1917")
+  timezone    String           @default("America/Sao_Paulo")
+
+  // Regras de agenda
+  slotIntervalMinutes Int @default(30)
+  minAdvanceMinutes   Int @default(60)
+  maxAdvanceDays      Int @default(30)
+  /// até quantos minutos antes o cliente pode cancelar/remarcar sozinho
+  cancelMinAdvanceMinutes Int @default(120)
+
+  statusReason String?
+  approvedAt   DateTime?
+  createdAt    DateTime  @default(now())
+  updatedAt    DateTime  @updatedAt
+
+  owner         User           @relation(fields: [ownerId], references: [id], onDelete: Cascade)
+  subscription  Subscription?
+  services      Service[]
+  professionals Professional[]
+  appointments  Appointment[]
+  queueEntries  QueueEntry[]
+
+  @@index([ownerId])
+  @@index([status])
+  @@map("barbershops")
+}
+
+model Subscription {
+  id           String             @id @default(cuid())
+  barbershopId String             @unique
+  planId       String
+  status       SubscriptionStatus
+  /// valor mensal negociado (pode diferir do preço do plano)
+  priceCents   Int
+  /// dia do mês do vencimento (1–28)
+  billingDay   Int
+  trialEndsAt  DateTime?
+  startedAt    DateTime           @default(now())
+  canceledAt   DateTime?
+  createdAt    DateTime           @default(now())
+  updatedAt    DateTime           @updatedAt
+
+  barbershop Barbershop @relation(fields: [barbershopId], references: [id], onDelete: Cascade)
+  plan       Plan       @relation(fields: [planId], references: [id])
+  payments   Payment[]
+
+  @@map("subscriptions")
+}
+
+/// Mensalidade: uma por mês de referência. Baixa manual pelo super admin (gateway no futuro).
+model Payment {
+  id             String        @id @default(cuid())
+  subscriptionId String
+  /// "2026-11" — mês de referência
+  referenceMonth String
+  amountCents    Int
+  dueDate        DateTime      @db.Date
+  status         PaymentStatus @default(PENDING)
+  paidAt         DateTime?
+  method         String?
+  notes          String?
+  createdAt      DateTime      @default(now())
+  updatedAt      DateTime      @updatedAt
+
+  subscription Subscription @relation(fields: [subscriptionId], references: [id], onDelete: Cascade)
+
+  @@unique([subscriptionId, referenceMonth])
+  @@index([status, dueDate])
+  @@map("payments")
+}
+
+model Service {
+  id              String   @id @default(cuid())
+  barbershopId    String
+  name            String
+  description     String?
+  durationMinutes Int
+  priceCents      Int
+  active          Boolean  @default(true)
+  position        Int      @default(0)
+  createdAt       DateTime @default(now())
+  updatedAt       DateTime @updatedAt
+
+  barbershop    Barbershop            @relation(fields: [barbershopId], references: [id], onDelete: Cascade)
+  professionals ProfessionalService[]
+  appointments  Appointment[]
+  queueEntries  QueueEntry[]
+
+  @@index([barbershopId])
+  @@map("services")
+}
+
+model Professional {
+  id           String   @id @default(cuid())
+  barbershopId String
+  /// login próprio do profissional (opcional)
+  userId       String?  @unique
+  name         String
+  bio          String?
+  avatarUrl    String?
+  active       Boolean  @default(true)
+  /// fila aberta para receber clientes (modo ordem de chegada)
+  queueOpen    Boolean  @default(true)
+  createdAt    DateTime @default(now())
+  updatedAt    DateTime @updatedAt
+
+  barbershop   Barbershop            @relation(fields: [barbershopId], references: [id], onDelete: Cascade)
+  user         User?                 @relation(fields: [userId], references: [id], onDelete: SetNull)
+  services     ProfessionalService[]
+  workingHours WorkingHour[]
+  timeOffs     TimeOff[]
+  appointments Appointment[]
+  queueEntries QueueEntry[]
+
+  @@index([barbershopId])
+  @@map("professionals")
+}
+
+model ProfessionalService {
+  professionalId String
+  serviceId      String
+
+  professional Professional @relation(fields: [professionalId], references: [id], onDelete: Cascade)
+  service      Service      @relation(fields: [serviceId], references: [id], onDelete: Cascade)
+
+  @@id([professionalId, serviceId])
+  @@map("professional_services")
+}
+
+/// Grade semanal. Vários registros no mesmo dia = intervalos (ex.: pausa do almoço).
+model WorkingHour {
+  id             String @id @default(cuid())
+  professionalId String
+  /// 0 = domingo … 6 = sábado
+  weekday        Int
+  /// minutos desde a meia-noite, no fuso da barbearia
+  startMinute    Int
+  endMinute      Int
+
+  professional Professional @relation(fields: [professionalId], references: [id], onDelete: Cascade)
+
+  @@index([professionalId, weekday])
+  @@map("working_hours")
+}
+
+/// Bloqueio de agenda: folga, férias, compromisso
+model TimeOff {
+  id             String   @id @default(cuid())
+  professionalId String
+  startsAt       DateTime
+  endsAt         DateTime
+  reason         String?
+  createdAt      DateTime @default(now())
+
+  professional Professional @relation(fields: [professionalId], references: [id], onDelete: Cascade)
+
+  @@index([professionalId, startsAt])
+  @@map("time_offs")
+}
+
+model Appointment {
+  id             String            @id @default(cuid())
+  barbershopId   String
+  professionalId String
+  serviceId      String
+  /// cliente agenda sem conta: nome + telefone
+  clientName     String
+  clientPhone    String
+  startsAt       DateTime
+  endsAt         DateTime
+  status         AppointmentStatus @default(CONFIRMED)
+  /// snapshot do preço no momento do agendamento
+  priceCents     Int
+  notes          String?
+  /// "public" = pelo link, "panel" = lançado pelo dono
+  source         String            @default("public")
+  /// token secreto do link do cliente (ver, cancelar, remarcar sem login)
+  accessToken    String            @unique @default(dbgenerated("replace((gen_random_uuid())::text, '-', '')"))
+  canceledAt     DateTime?
+  /// "client" | "barbershop"
+  canceledBy     String?
+  cancelReason   String?
+  /// quantas vezes o cliente remarcou
+  rescheduleCount Int              @default(0)
+  createdAt      DateTime          @default(now())
+  updatedAt      DateTime          @updatedAt
+
+  barbershop   Barbershop   @relation(fields: [barbershopId], references: [id], onDelete: Cascade)
+  professional Professional @relation(fields: [professionalId], references: [id], onDelete: Cascade)
+  service      Service      @relation(fields: [serviceId], references: [id])
+
+  @@index([barbershopId, startsAt])
+  @@index([professionalId, startsAt])
+  @@map("appointments")
+}
+
+/// Cliente na fila de um barbeiro (modo ordem de chegada). A ordem é a hora de chegada.
+model QueueEntry {
+  id             String      @id @default(cuid())
+  barbershopId   String
+  professionalId String
+  serviceId      String?
+  clientName     String
+  clientPhone    String?
+  status         QueueStatus @default(WAITING)
+  /// snapshot do preço do serviço (0 se não informado)
+  priceCents     Int         @default(0)
+  joinedAt       DateTime    @default(now())
+  startedAt      DateTime?
+  finishedAt     DateTime?
+
+  barbershop   Barbershop   @relation(fields: [barbershopId], references: [id], onDelete: Cascade)
+  professional Professional @relation(fields: [professionalId], references: [id], onDelete: Cascade)
+  service      Service?     @relation(fields: [serviceId], references: [id], onDelete: SetNull)
+
+  @@index([professionalId, status, joinedAt])
+  @@index([barbershopId, joinedAt])
+  @@map("queue_entries")
+}

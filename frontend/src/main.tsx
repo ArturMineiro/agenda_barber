@@ -1,15 +1,17 @@
-import React from 'react';
-import ReactDOM from 'react-dom/client';
-import App from './App';
-import './index.css';
-import './twind';
-import { QueryClientProvider } from '@tanstack/react-query';
-import { queryClient } from './queryClient';
+import React from "react";
+import ReactDOM from "react-dom/client";
+import { QueryClientProvider } from "@tanstack/react-query";
+import { RouterProvider } from "react-router-dom";
+import { Toaster } from "sonner";
+import { queryClient } from "@/lib/query-client";
+import { router } from "@/router";
+import "./index.css";
 
-ReactDOM.createRoot(document.getElementById('root')!).render(
+ReactDOM.createRoot(document.getElementById("root")!).render(
   <React.StrictMode>
     <QueryClientProvider client={queryClient}>
-      <App />
+      <RouterProvider router={router} />
+      <Toaster position="top-center" richColors closeButton />
     </QueryClientProvider>
-  </React.StrictMode>
+  </React.StrictMode>,
 );
