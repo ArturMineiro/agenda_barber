@@ -135,11 +135,11 @@ O dono pode **desmarcar com motivo** e avisar o cliente, além de enviar **mensa
 
 ### Catálogo de cortes com fotos
 
-Cada serviço pode ter até **6 fotos** (a primeira é a capa), enviadas em **Serviços → editar**. A página da barbearia mostra o carrossel **"Nossos cortes"**; ao tocar, o cliente vê a galeria e agenda aquele corte. A lista de serviços também ganha miniaturas.
+Cada serviço pode ter até **3 fotos** (a primeira é a capa), enviadas em **Serviços → editar**. A página da barbearia mostra o carrossel **"Nossos cortes"**; ao tocar, o cliente vê a galeria e agenda aquele corte. A lista de serviços também ganha miniaturas.
 
 - O celular reduz a foto antes de enviar (lado maior 1500px) e o servidor gera **duas versões WebP**: 900×1125 (≈30–100 KB) para carrossel/galeria e 240×300 (≈1–15 KB) para listas. Uma foto de câmera de 6 MB vira ~30 KB.
 - Lazy loading em tudo, menos nas 2 primeiras fotos do carrossel.
-- Limites: 6 por serviço, 80 por barbearia. Arquivos são apagados junto com a foto ou o serviço.
+- Limites: 3 por serviço, 60 por barbearia. Arquivos são apagados junto com a foto ou o serviço.
 
 ### Notificações no celular (sem app de loja)
 

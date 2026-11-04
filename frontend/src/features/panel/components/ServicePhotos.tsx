@@ -7,7 +7,7 @@ import { cn } from "@/lib/utils";
 import type { Service } from "@/types/api";
 import { useServicePhotoActions, useServices } from "../api";
 
-const MAX = 6;
+const MAX = 3;
 
 /**
  * Fotos do corte (catálogo). Aparecem no carrossel da página da barbearia.

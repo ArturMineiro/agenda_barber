@@ -10,8 +10,8 @@ export const servicePhotoRoutes = Router({ mergeParams: true });
 servicePhotoRoutes.use(requireAuth, requireRole("OWNER"), loadOwnerBarbershop);
 
 /** Por serviço: suficiente para mostrar ângulos (frente, lado, nuca) sem pesar a página */
-export const MAX_PHOTOS_PER_SERVICE = 6;
-const MAX_PHOTOS_PER_BARBERSHOP = 80;
+export const MAX_PHOTOS_PER_SERVICE = 3;
+const MAX_PHOTOS_PER_BARBERSHOP = 60;
 
 /** :serviceId vem do caminho onde o router foi montado (mergeParams) */
 const serviceIdOf = (req: Request) => String((req.params as Record<string, string>).serviceId);
