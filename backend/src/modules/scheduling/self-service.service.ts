@@ -150,6 +150,7 @@ export function toPublicAppointment(appt: Awaited<ReturnType<typeof findByToken>
       coverUrl: b.coverUrl,
       primaryColor: b.primaryColor,
       secondaryColor: b.secondaryColor,
+      pageTheme: b.pageTheme,
       maxAdvanceDays: b.maxAdvanceDays,
       teamType: b.teamType,
     },

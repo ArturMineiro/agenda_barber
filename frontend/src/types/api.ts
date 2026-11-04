@@ -1,6 +1,7 @@
 import type {
   AppointmentStatus,
   BookingMode,
+  PageTheme,
   QueueStatus,
   BarbershopStatus,
   PaymentStatus,
@@ -61,6 +62,7 @@ export interface Barbershop {
   statusReason: string | null;
   teamType: TeamType;
   bookingMode: BookingMode;
+  pageTheme: PageTheme;
   description: string | null;
   phone: string | null;
   whatsapp: string | null;

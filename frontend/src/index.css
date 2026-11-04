@@ -53,3 +53,65 @@
   scrollbar-width: none;
   &::-webkit-scrollbar { display: none; }
 }
+
+/*
+ * Página pública com fundo escuro (Ajustes → Fundo da página → Escuro).
+ * Em vez de reescrever cada tela, remapeia a escala zinc: o que era claro vira escuro
+ * e vice-versa. A classe fica no <html> para valer também nas janelas (portal).
+ */
+.public-dark {
+  color-scheme: dark;
+  --color-zinc-50: #0b0b0d;
+  --color-zinc-100: #1f1f23;
+  --color-zinc-200: #2c2c31;
+  --color-zinc-300: #3f3f46;
+  --color-zinc-400: #8b8b94;
+  --color-zinc-500: #a1a1aa;
+  --color-zinc-600: #c4c4cc;
+  --color-zinc-700: #d4d4d8;
+  --color-zinc-800: #e4e4e7;
+  --color-zinc-900: #f4f4f5;
+  --color-zinc-950: #fafafa;
+  --color-card: #161618;
+
+  /* faixas de aviso: fundo translúcido e texto claro */
+  --color-emerald-50: rgb(16 185 129 / 0.12);
+  --color-emerald-100: rgb(16 185 129 / 0.2);
+  --color-emerald-200: rgb(16 185 129 / 0.3);
+  --color-emerald-700: #6ee7b7;
+  --color-emerald-800: #a7f3d0;
+  --color-red-50: rgb(239 68 68 / 0.12);
+  --color-red-200: rgb(239 68 68 / 0.3);
+  --color-red-700: #fca5a5;
+  --color-red-800: #fecaca;
+  --color-amber-50: rgb(245 158 11 / 0.12);
+  --color-amber-800: #fcd34d;
+  --color-sky-50: rgb(14 165 233 / 0.12);
+  --color-sky-700: #7dd3fc;
+}
+
+@layer utilities {
+  /* cartões brancos viram cinza-grafite */
+  .public-dark .bg-white {
+    background-color: var(--color-card);
+  }
+  .public-dark .bg-white\/95,
+  .public-dark .bg-white\/90,
+  .public-dark .bg-white\/85 {
+    background-color: rgb(22 22 24 / 0.92);
+  }
+  .public-dark .border-white,
+  .public-dark .ring-white {
+    border-color: var(--color-zinc-50);
+    --tw-ring-color: var(--color-zinc-50);
+  }
+  /* botões/chips "pretos" viram claros: o texto branco precisa escurecer */
+  .public-dark .bg-zinc-900.text-white,
+  .public-dark .bg-zinc-800.text-white {
+    color: #0b0b0d;
+  }
+  /* fundo atrás das janelas continua escuro */
+  .public-dark .bg-zinc-950\/40 {
+    background-color: rgb(0 0 0 / 0.65);
+  }
+}

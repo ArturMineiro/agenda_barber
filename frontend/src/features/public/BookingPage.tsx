@@ -20,7 +20,7 @@ import { Field, Input, Textarea } from "@/components/ui/input";
 import { Avatar, FullPageSpinner, Skeleton } from "@/components/ui/misc";
 import { DateStrip } from "@/components/DateStrip";
 import { ApiError, errorMessage } from "@/lib/api";
-import { brandVars } from "@/lib/theme";
+import { brandVars, usePublicTheme } from "@/lib/theme";
 import { saveBooking, upcomingBookings } from "@/lib/my-bookings";
 import { addDays, cn, formatDuration, formatLongDate, formatMoney, formatTime, maskPhone, toDateKey, whatsappLink } from "@/lib/utils";
 import type { Slot } from "@/types/api";
@@ -44,12 +44,13 @@ function loadClient() {
 export function BookingPage() {
   const { slug = "" } = useParams();
   const { data, isLoading, error } = usePublicBarbershop(slug);
+  usePublicTheme(data?.barbershop);
 
   if (isLoading) return <FullPageSpinner />;
   if (error || !data) return <Unavailable error={error} />;
 
   return (
-    <div style={brandVars(data.barbershop.primaryColor, data.barbershop.secondaryColor)} className="min-h-dvh bg-zinc-50">
+    <div style={brandVars(data.barbershop.primaryColor, data.barbershop.secondaryColor, data.barbershop.pageTheme)} className="min-h-dvh bg-zinc-50">
       <Booking data={data} slug={slug} />
     </div>
   );

@@ -10,7 +10,7 @@ import { Avatar, FullPageSpinner, Skeleton } from "@/components/ui/misc";
 import { DateStrip } from "@/components/DateStrip";
 import { ApiError, errorMessage } from "@/lib/api";
 import { updateSavedBooking } from "@/lib/my-bookings";
-import { brandVars, readableOn } from "@/lib/theme";
+import { brandVars, readableOn, usePublicTheme } from "@/lib/theme";
 import { addDays, cn, formatDateTime, formatLongDate, formatMoney, formatTime, fromDateKey, toDateKey, whatsappLink } from "@/lib/utils";
 import type { Slot } from "@/types/api";
 import { useCancelMine, useMyAppointment, useRescheduleAvailability, useRescheduleMine, type MyAppointment } from "./api";
@@ -19,6 +19,7 @@ import { useCancelMine, useMyAppointment, useRescheduleAvailability, useReschedu
 export function ManageAppointmentPage() {
   const { token = "" } = useParams();
   const { data: appt, isLoading, error } = useMyAppointment(token);
+  usePublicTheme(appt?.barbershop);
 
   if (isLoading) return <FullPageSpinner />;
   if (error || !appt) {
@@ -33,7 +34,7 @@ export function ManageAppointmentPage() {
 
   const shop = appt.barbershop;
   return (
-    <div style={brandVars(shop.primaryColor, shop.secondaryColor)} className="min-h-dvh bg-zinc-50">
+    <div style={brandVars(shop.primaryColor, shop.secondaryColor, shop.pageTheme)} className="min-h-dvh bg-zinc-50">
       <header className="bg-brand-2 text-brand-2-foreground">
         <div className="mx-auto flex max-w-xl items-center gap-3 px-4 py-4">
           <div

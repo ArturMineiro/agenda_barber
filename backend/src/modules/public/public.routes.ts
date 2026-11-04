@@ -77,6 +77,7 @@ publicRoutes.get("/barbershops/:slug", async (req, res) => {
       coverUrl: b.coverUrl,
       primaryColor: b.primaryColor,
       secondaryColor: b.secondaryColor,
+      pageTheme: b.pageTheme,
       teamType: b.teamType,
       bookingMode: b.bookingMode,
       maxAdvanceDays: b.maxAdvanceDays,

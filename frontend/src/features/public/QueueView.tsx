@@ -3,7 +3,7 @@ import { Link } from "react-router-dom";
 import { Clock, MessageCircle, Moon, Navigation, Sparkles } from "lucide-react";
 import { APP_NAME } from "@navalha/shared";
 import { Skeleton } from "@/components/ui/misc";
-import { readableOn } from "@/lib/theme";
+import { accentFor, readableOn } from "@/lib/theme";
 import { cn, formatDuration, formatMoney, whatsappLink } from "@/lib/utils";
 import { Hero } from "./Hero";
 import { usePublicQueue, type PublicBarbershop, type PublicQueueItem } from "./api";
@@ -51,7 +51,12 @@ export function QueueView({ data, slug }: { data: PublicBarbershop; slug: string
   const totalWaiting = open.reduce((s, p) => s + p.waiting, 0);
   const seconds = dataUpdatedAt ? Math.max(0, Math.round((now - dataUpdatedAt) / 1000)) : 0;
   // cor principal clara (ex.: dourado) não lê bem no branco: usa a cor de apoio
-  const priceColor = readableOn(shop.primaryColor) === "#ffffff" ? shop.primaryColor : shop.secondaryColor;
+  const priceColor =
+    shop.pageTheme === "DARK"
+      ? accentFor(shop.primaryColor, shop.secondaryColor, "DARK")
+      : readableOn(shop.primaryColor) === "#ffffff"
+        ? shop.primaryColor
+        : shop.secondaryColor;
 
   return (
     <>

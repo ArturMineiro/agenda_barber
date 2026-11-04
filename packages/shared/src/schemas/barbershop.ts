@@ -1,5 +1,5 @@
 import { z } from "zod";
-import { BOOKING_MODES } from "../enums";
+import { BOOKING_MODES, PAGE_THEMES } from "../enums";
 import {
   hexColorSchema,
   optionalPhoneSchema,
@@ -29,6 +29,8 @@ export const barbershopSettingsSchema = z.object({
   coverUrl: optionalImageSchema,
   primaryColor: hexColorSchema,
   secondaryColor: hexColorSchema,
+  /** fundo claro ou escuro na página do cliente */
+  pageTheme: z.enum(PAGE_THEMES).default("LIGHT"),
   bookingMode: z.enum(BOOKING_MODES),
   slotIntervalMinutes: z.number().refine((v) => (SLOT_INTERVALS as readonly number[]).includes(v), "Intervalo inválido"),
   /** Antecedência mínima para o cliente agendar (minutos) */

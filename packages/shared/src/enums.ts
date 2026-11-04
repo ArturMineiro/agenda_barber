@@ -27,5 +27,9 @@ export const APP_NAME = "Navalha";
 export const BOOKING_MODES = ["SCHEDULE", "QUEUE"] as const;
 export type BookingMode = (typeof BOOKING_MODES)[number];
 
+/** Fundo da página pública da barbearia */
+export const PAGE_THEMES = ["LIGHT", "DARK"] as const;
+export type PageTheme = (typeof PAGE_THEMES)[number];
+
 export const QUEUE_STATUS = ["WAITING", "IN_SERVICE", "DONE", "NO_SHOW", "CANCELED"] as const;
 export type QueueStatus = (typeof QUEUE_STATUS)[number];

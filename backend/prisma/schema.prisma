@@ -31,6 +31,11 @@ enum TeamType {
 }
 
 /// Como a barbearia atende
+enum PageTheme {
+  LIGHT
+  DARK
+}
+
 enum BookingMode {
   SCHEDULE // agenda com horário marcado
   QUEUE // ordem de chegada (fila presencial por barbeiro)
@@ -106,6 +111,8 @@ model Barbershop {
   status      BarbershopStatus @default(PENDING)
   teamType    TeamType
   bookingMode BookingMode      @default(SCHEDULE)
+  /// fundo da página pública: claro ou escuro
+  pageTheme   PageTheme        @default(LIGHT)
   description String?
   phone       String?
   whatsapp    String?

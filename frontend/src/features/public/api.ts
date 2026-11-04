@@ -1,5 +1,5 @@
 import { useMutation, useQueries, useQuery, useQueryClient } from "@tanstack/react-query";
-import type { AppointmentStatus, BookingMode, CreateBookingInput, RescheduleInput, TeamType } from "@navalha/shared";
+import type { AppointmentStatus, BookingMode, PageTheme, CreateBookingInput, RescheduleInput, TeamType } from "@navalha/shared";
 import { api, qs } from "@/lib/api";
 import type { Slot } from "@/types/api";
 
@@ -17,6 +17,7 @@ export interface PublicBarbershop {
     coverUrl: string | null;
     primaryColor: string;
     secondaryColor: string;
+    pageTheme: PageTheme;
     teamType: TeamType;
     bookingMode: BookingMode;
     maxAdvanceDays: number;
@@ -105,7 +106,7 @@ export interface MyAppointment {
   cancelMinAdvanceMinutes: number;
   barbershop: Pick<
     PublicBarbershop["barbershop"],
-    "name" | "slug" | "phone" | "whatsapp" | "address" | "city" | "logoUrl" | "coverUrl" | "primaryColor" | "secondaryColor" | "maxAdvanceDays" | "teamType"
+    "name" | "slug" | "phone" | "whatsapp" | "address" | "city" | "logoUrl" | "coverUrl" | "primaryColor" | "secondaryColor" | "pageTheme" | "maxAdvanceDays" | "teamType"
   >;
 }
 
