@@ -26,6 +26,7 @@ import { addDays, cn, formatDuration, formatLongDate, formatMoney, formatTime, m
 import type { Slot } from "@/types/api";
 import { QueueView } from "./QueueView";
 import { Hero } from "./Hero";
+import { CatalogCarousel, ServiceSheet, ServiceThumb, type CatalogService } from "./Catalog";
 import { useCreateBooking, useMyAppointments, usePublicAvailability, usePublicBarbershop, type BookingResult, type PublicBarbershop } from "./api";
 
 type Step = "service" | "professional" | "time" | "details" | "done";
@@ -67,6 +68,7 @@ function ScheduleBooking({ data, slug }: { data: PublicBarbershop; slug: string 
   const [date, setDate] = React.useState(() => toDateKey(new Date()));
   const [slot, setSlot] = React.useState<Slot>();
   const [result, setResult] = React.useState<BookingResult>();
+  const [viewing, setViewing] = React.useState<CatalogService | null>(null);
   const topRef = React.useRef<HTMLDivElement>(null);
 
   const service = services.find((s) => s.id === serviceId);
@@ -106,6 +108,7 @@ function ScheduleBooking({ data, slug }: { data: PublicBarbershop; slug: string 
         {step === "service" && (
           <section className="animate-in">
             <MyUpcoming slug={slug} />
+            <CatalogCarousel services={services} onOpen={setViewing} />
             <h2 className="mb-3 text-lg font-semibold">Escolha o serviço</h2>
             <div className="space-y-2">
               {services.map((s) => (
@@ -114,6 +117,7 @@ function ScheduleBooking({ data, slug }: { data: PublicBarbershop; slug: string 
                   onClick={() => pickService(s.id)}
                   className="flex w-full items-center gap-3 rounded-2xl border border-zinc-200/80 bg-white p-4 text-left shadow-xs transition hover:border-zinc-300 active:scale-[0.99]"
                 >
+                  <ServiceThumb service={s} onOpen={setViewing} />
                   <div className="min-w-0 flex-1">
                     <p className="font-medium">{s.name}</p>
                     {s.description && <p className="mt-0.5 line-clamp-2 text-sm text-zinc-500">{s.description}</p>}
@@ -199,6 +203,15 @@ function ScheduleBooking({ data, slug }: { data: PublicBarbershop; slug: string 
 
         {step === "done" && result && <Done result={result} shop={shop} />}
       </div>
+
+      <ServiceSheet
+        service={viewing}
+        onClose={() => setViewing(null)}
+        onBook={(s) => {
+          setViewing(null);
+          pickService(s.id);
+        }}
+      />
 
       {/* Resumo + ação fixos no rodapé (alcance do polegar) */}
       {service && (step === "time" || step === "professional" || step === "details") && (

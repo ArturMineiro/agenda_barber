@@ -121,6 +121,7 @@ panelRoutes.get("/services", async (req, res) => {
     await prisma.service.findMany({
       where: { barbershopId: shop(req).id },
       orderBy: [{ position: "asc" }, { createdAt: "asc" }],
+      include: { photos: { orderBy: [{ position: "asc" }, { createdAt: "asc" }], select: { id: true, url: true, thumbUrl: true } } },
     }),
   );
 });
@@ -158,7 +159,12 @@ panelRoutes.delete("/services/:id", async (req, res) => {
   const used = await prisma.appointment.count({ where: { serviceId: service.id } });
   // com histórico, apenas desativa para não quebrar relatórios
   if (used > 0) await prisma.service.update({ where: { id: service.id }, data: { active: false } });
-  else await prisma.service.delete({ where: { id: service.id } });
+  else {
+    // apaga também os arquivos das fotos (os registros saem em cascata)
+    const photos = await prisma.servicePhoto.findMany({ where: { serviceId: service.id } });
+    await prisma.service.delete({ where: { id: service.id } });
+    await Promise.all(photos.flatMap((p) => [deleteImage(p.url, service.barbershopId), deleteImage(p.thumbUrl, service.barbershopId)]));
+  }
   res.status(204).end();
 });
 

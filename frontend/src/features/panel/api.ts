@@ -70,6 +70,27 @@ export function useSaveService() {
   });
 }
 
+// ---------- Fotos do catálogo ----------
+
+export function useServicePhotoActions(serviceId: string) {
+  const qc = useQueryClient();
+  const refresh = () => qc.invalidateQueries({ queryKey: panelKeys.services() });
+  return {
+    refresh,
+    makeCover: useMutation({
+      mutationFn: (photoId: string) => api.post(`/panel/services/${serviceId}/photos/${photoId}/cover`),
+      onSuccess: () => {
+        refresh();
+        toast.success("Capa atualizada");
+      },
+    }),
+    remove: useMutation({
+      mutationFn: (photoId: string) => api.delete(`/panel/services/${serviceId}/photos/${photoId}`),
+      onSuccess: refresh,
+    }),
+  };
+}
+
 export function useDeleteService() {
   const qc = useQueryClient();
   return useMutation({

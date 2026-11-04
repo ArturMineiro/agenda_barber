@@ -47,7 +47,14 @@ publicRoutes.get("/barbershops/:slug", async (req, res) => {
     prisma.service.findMany({
       where: { barbershopId: b.id, active: true, professionals: { some: { professional: { active: true } } } },
       orderBy: [{ position: "asc" }, { createdAt: "asc" }],
-      select: { id: true, name: true, description: true, durationMinutes: true, priceCents: true },
+      select: {
+        id: true,
+        name: true,
+        description: true,
+        durationMinutes: true,
+        priceCents: true,
+        photos: { orderBy: [{ position: "asc" }, { createdAt: "asc" }], select: { url: true, thumbUrl: true } },
+      },
     }),
     prisma.professional.findMany({
       where: { barbershopId: b.id, active: true },

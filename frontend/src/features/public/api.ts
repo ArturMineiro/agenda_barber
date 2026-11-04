@@ -22,7 +22,15 @@ export interface PublicBarbershop {
     maxAdvanceDays: number;
     timezone: string;
   };
-  services: { id: string; name: string; description: string | null; durationMinutes: number; priceCents: number }[];
+  services: {
+    id: string;
+    name: string;
+    description: string | null;
+    durationMinutes: number;
+    priceCents: number;
+    /** catálogo: a primeira é a capa */
+    photos: { url: string; thumbUrl: string }[];
+  }[];
   professionals: { id: string; name: string; bio: string | null; avatarUrl: string | null; serviceIds: string[] }[];
 }
 

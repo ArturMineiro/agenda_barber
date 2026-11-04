@@ -138,6 +138,7 @@ model Barbershop {
   appointments  Appointment[]
   queueEntries  QueueEntry[]
   pushSubscriptions PushSubscription[]
+  servicePhotos ServicePhoto[]
 
   @@index([ownerId])
   @@index([status])
@@ -204,6 +205,7 @@ model Service {
   professionals ProfessionalService[]
   appointments  Appointment[]
   queueEntries  QueueEntry[]
+  photos        ServicePhoto[]
 
   @@index([barbershopId])
   @@map("services")
@@ -354,4 +356,23 @@ model PushSubscription {
 
   @@index([barbershopId])
   @@map("push_subscriptions")
+}
+
+/// Fotos do corte/serviço (catálogo). A de menor posição é a capa.
+model ServicePhoto {
+  id           String   @id @default(cuid())
+  serviceId    String
+  barbershopId String
+  /// 900x1125 WebP, usada no carrossel e na galeria
+  url          String
+  /// 240x300 WebP, usada nas listas
+  thumbUrl     String
+  position     Int      @default(0)
+  createdAt    DateTime @default(now())
+
+  service    Service    @relation(fields: [serviceId], references: [id], onDelete: Cascade)
+  barbershop Barbershop @relation(fields: [barbershopId], references: [id], onDelete: Cascade)
+
+  @@index([serviceId, position])
+  @@map("service_photos")
 }

@@ -2,7 +2,7 @@ import * as React from "react";
 import { useForm, Controller } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { z } from "zod";
-import { Clock, Pencil, Plus, Scissors, Trash2 } from "lucide-react";
+import { Camera, Clock, Pencil, Plus, Scissors, Trash2 } from "lucide-react";
 import { serviceSchema } from "@navalha/shared";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
@@ -13,6 +13,7 @@ import { Switch } from "@/components/ui/switch";
 import { cn, formatDuration, formatMoney } from "@/lib/utils";
 import type { Service } from "@/types/api";
 import { useDeleteService, useSaveService, useServices } from "../api";
+import { ServicePhotos } from "../components/ServicePhotos";
 
 /** No formulário o preço é digitado em reais ("45,90"); a API recebe centavos */
 const formSchema = serviceSchema.omit({ priceCents: true }).extend({
@@ -63,9 +64,13 @@ export function ServicesPage() {
                 !s.active && "opacity-60",
               )}
             >
-              <div className="flex size-11 shrink-0 items-center justify-center rounded-xl bg-amber-50 text-amber-700">
-                <Scissors className="size-5" />
-              </div>
+              {s.photos[0] ? (
+                <img src={s.photos[0].thumbUrl} alt="" loading="lazy" className="h-14 w-11 shrink-0 rounded-xl object-cover ring-1 ring-zinc-200" />
+              ) : (
+                <div className="flex size-11 shrink-0 items-center justify-center rounded-xl bg-amber-50 text-amber-700">
+                  <Scissors className="size-5" />
+                </div>
+              )}
               <div className="min-w-0 flex-1">
                 <div className="flex items-center gap-2">
                   <p className="truncate font-medium">{s.name}</p>
@@ -73,6 +78,13 @@ export function ServicesPage() {
                 </div>
                 <p className="mt-0.5 flex items-center gap-1 text-sm text-zinc-500">
                   <Clock className="size-3.5" /> {formatDuration(s.durationMinutes)}
+                  {s.photos.length > 0 ? (
+                    <span className="ml-1.5 inline-flex items-center gap-1">
+                      <Camera className="size-3.5" /> {s.photos.length}
+                    </span>
+                  ) : (
+                    <span className="ml-1.5 text-xs text-amber-700">· sem foto</span>
+                  )}
                 </p>
               </div>
               <span className="font-semibold">{formatMoney(s.priceCents)}</span>
@@ -89,12 +101,21 @@ export function ServicesPage() {
         />
       )}
 
-      <ServiceDialog service={editing} onClose={() => setEditing(null)} />
+      <ServiceDialog service={editing} onClose={() => setEditing(null)} onCreated={setEditing} />
     </div>
   );
 }
 
-function ServiceDialog({ service, onClose }: { service: Service | "new" | null; onClose: () => void }) {
+function ServiceDialog({
+  service,
+  onClose,
+  onCreated,
+}: {
+  service: Service | "new" | null;
+  onClose: () => void;
+  /** depois de criar, o diálogo continua aberto para adicionar as fotos */
+  onCreated: (s: Service) => void;
+}) {
   const save = useSaveService();
   const remove = useDeleteService();
   const isEdit = service && service !== "new";
@@ -118,7 +139,10 @@ function ServiceDialog({ service, onClose }: { service: Service | "new" | null; 
   }, [service, form]);
 
   const onSubmit = form.handleSubmit(({ price, ...v }) =>
-    save.mutate({ ...v, priceCents: toCents(price), id: isEdit ? service.id : undefined }, { onSuccess: onClose }),
+    save.mutate(
+      { ...v, priceCents: toCents(price), id: isEdit ? service.id : undefined },
+      { onSuccess: (saved) => (isEdit ? onClose() : onCreated({ ...saved, photos: [] })) },
+    ),
   );
 
   const onDelete = () => {
@@ -183,6 +207,14 @@ function ServiceDialog({ service, onClose }: { service: Service | "new" | null; 
             <Input inputMode="decimal" placeholder="0,00" className="pl-10" aria-invalid={!!errors.price} {...form.register("price")} />
           </div>
         </Field>
+
+        {isEdit ? (
+          <ServicePhotos serviceId={service.id} />
+        ) : (
+          <p className="flex items-center gap-2 rounded-xl bg-zinc-50 px-3 py-2.5 text-sm text-zinc-500">
+            <Camera className="size-4 shrink-0" /> Depois de salvar, você já pode adicionar as fotos do corte.
+          </p>
+        )}
 
         <Field label="Descrição (opcional)" error={errors.description?.message}>
           <Textarea rows={2} className="min-h-0" placeholder="Aparece na sua página de agendamento" {...form.register("description")} />

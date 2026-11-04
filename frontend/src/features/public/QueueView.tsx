@@ -7,6 +7,7 @@ import { readableOn } from "@/lib/theme";
 import { cn, formatDuration, formatMoney, whatsappLink } from "@/lib/utils";
 import { Hero } from "./Hero";
 import { usePublicQueue, type PublicBarbershop, type PublicQueueItem } from "./api";
+import { ServiceSheet, type CatalogService } from "./Catalog";
 
 /** "1h05" fica inteiro; "35" + "min" separados para o número aparecer grande */
 function waitParts(min: number) {
@@ -36,6 +37,7 @@ function useNow(ms = 20_000) {
  */
 export function QueueView({ data, slug }: { data: PublicBarbershop; slug: string }) {
   const { barbershop: shop, services } = data;
+  const [viewing, setViewing] = React.useState<CatalogService | null>(null);
   const { data: queue, isLoading, dataUpdatedAt } = usePublicQueue(slug, true);
   const now = useNow();
   const location = [shop.address, shop.city].filter(Boolean).join(", ");
@@ -149,7 +151,16 @@ export function QueueView({ data, slug }: { data: PublicBarbershop; slug: string
             <h2 className="mb-3 text-lg font-semibold">Serviços e preços</h2>
             <div className="grid grid-cols-2 gap-2.5">
               {services.map((s) => (
-                <div key={s.id} className="flex flex-col rounded-2xl bg-white p-4 shadow-xs ring-1 ring-zinc-200/80">
+                <div key={s.id} className="flex flex-col overflow-hidden rounded-2xl bg-white shadow-xs ring-1 ring-zinc-200/80">
+                  {s.photos[0] && (
+                    <button onClick={() => setViewing(s)} className="relative -mb-1 block aspect-[4/5] w-full" aria-label={`Ver fotos de ${s.name}`}>
+                      <img src={s.photos[0].url} alt={s.name} width={900} height={1125} loading="lazy" decoding="async" className="size-full object-cover" />
+                      {s.photos.length > 1 && (
+                        <span className="absolute top-2 right-2 rounded-full bg-black/50 px-1.5 text-[10px] font-medium text-white">{s.photos.length} fotos</span>
+                      )}
+                    </button>
+                  )}
+                  <div className="flex flex-1 flex-col p-4">
                   <p className="leading-snug font-medium">{s.name}</p>
                   {s.description && <p className="mt-0.5 line-clamp-2 text-xs text-zinc-500">{s.description}</p>}
                   <div className="mt-auto flex items-end justify-between pt-3">
@@ -160,11 +171,14 @@ export function QueueView({ data, slug }: { data: PublicBarbershop; slug: string
                       <Clock className="size-3" /> {formatDuration(s.durationMinutes)}
                     </span>
                   </div>
+                  </div>
                 </div>
               ))}
             </div>
           </section>
         )}
+
+        <ServiceSheet service={viewing} onClose={() => setViewing(null)} />
 
         <p className="text-center text-xs text-zinc-400">
           Página por{" "}

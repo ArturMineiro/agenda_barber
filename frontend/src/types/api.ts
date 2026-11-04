@@ -94,6 +94,8 @@ export interface Service {
   durationMinutes: number;
   priceCents: number;
   active: boolean;
+  /** catálogo: a primeira é a capa */
+  photos: { id: string; url: string; thumbUrl: string }[];
 }
 
 export interface WorkingHour {
