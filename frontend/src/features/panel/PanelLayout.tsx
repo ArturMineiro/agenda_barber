@@ -1,4 +1,4 @@
-import { CalendarDays, Clock, Home, ListOrdered, Scissors, Settings, Users, UserSquare2 } from "lucide-react";
+import { Bell, CalendarDays, Clock, Home, ListOrdered, Scissors, Settings, Users, UserSquare2 } from "lucide-react";
 import { AppShell, type NavItem } from "@/components/layout/AppShell";
 import { FullPageSpinner } from "@/components/ui/misc";
 import { SupportLink } from "@/lib/support";
@@ -13,6 +13,7 @@ const NAV: NavItem[] = [
   { to: "/painel/servicos", label: "Serviços", icon: Scissors, mobile: true },
   // no celular, os itens abaixo ficam em "Mais"
   { to: "/painel/clientes", label: "Clientes", icon: UserSquare2 },
+  { to: "/painel/notificacoes", label: "Notificações", icon: Bell },
   { to: "/painel/configuracoes", label: "Ajustes", icon: Settings },
 ];
 
@@ -20,7 +21,8 @@ export function PanelLayout() {
   const { data: shop, isLoading } = useBarbershop();
   if (isLoading || !shop) return <FullPageSpinner />;
 
-  const nav = NAV.map((n) => {
+  // fila é presencial: não há agendamento pelo link para avisar
+  const nav = NAV.filter((n) => !(n.to === "/painel/notificacoes" && shop.bookingMode === "QUEUE")).map((n) => {
     // ordem de chegada: a agenda vira a fila
     if (n.to === "/painel/agenda" && shop.bookingMode === "QUEUE") return { ...n, to: "/painel/fila", label: "Fila", icon: ListOrdered };
     if (n.to === "/painel/equipe" && shop.teamType === "SOLO") return { ...n, label: "Horários", icon: Clock };

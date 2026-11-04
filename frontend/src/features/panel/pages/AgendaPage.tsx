@@ -1,5 +1,6 @@
 import * as React from "react";
 import { CalendarDays, Plus } from "lucide-react";
+import { useSearchParams } from "react-router-dom";
 import { Button } from "@/components/ui/button";
 import { DateStrip } from "@/components/DateStrip";
 import { EmptyState, PageHeader, Skeleton, Tabs } from "@/components/ui/misc";
@@ -9,7 +10,12 @@ import { AppointmentCard } from "../components/AppointmentCard";
 import { NewAppointmentDialog } from "../components/NewAppointmentDialog";
 
 export function AgendaPage() {
-  const [date, setDate] = React.useState(() => toDateKey(new Date()));
+  // ?data=2026-11-05 (ao tocar numa notificação) abre direto no dia do horário
+  const [params] = useSearchParams();
+  const [date, setDate] = React.useState(() => {
+    const d = params.get("data");
+    return d && /^\d{4}-\d{2}-\d{2}$/.test(d) && d >= toDateKey(new Date()) ? d : toDateKey(new Date());
+  });
   const [pro, setPro] = React.useState<string>("all");
   const [creating, setCreating] = React.useState(false);
   const { data: shop } = useBarbershop();

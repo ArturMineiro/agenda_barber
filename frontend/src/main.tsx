@@ -5,7 +5,10 @@ import { RouterProvider } from "react-router-dom";
 import { Toaster } from "sonner";
 import { queryClient } from "@/lib/query-client";
 import { router } from "@/router";
+import { registerServiceWorker } from "@/lib/push";
 import "./index.css";
+
+registerServiceWorker();
 
 ReactDOM.createRoot(document.getElementById("root")!).render(
   <React.StrictMode>

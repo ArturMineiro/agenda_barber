@@ -133,6 +133,15 @@ Cada agendamento tem um **link secreto** (`/agendamento/<token>`), mostrado na c
 
 O dono pode **desmarcar com motivo** e avisar o cliente, além de enviar **mensagens prontas** (confirmação, lembrete, atraso) — o WhatsApp abre com o texto e o link já preenchidos; envio 100% automático exigiria a API paga do WhatsApp Business.
 
+### Notificações no celular (sem app de loja)
+
+O painel é um **PWA**: o dono adiciona o Navalha à tela de início (ícone igual a um app) e ativa as notificações em **Mais → Notificações**, que também traz o passo a passo para Android, iPhone e computador. Ele recebe um aviso quando um cliente **agenda, remarca ou desmarca** pelo link; ao tocar, abre a agenda no dia do horário.
+
+- Web Push padrão (`web-push` + service worker `frontend/public/sw.js`), sem custo por mensagem.
+- Chaves VAPID no `.env` (`VAPID_PUBLIC_KEY`, `VAPID_PRIVATE_KEY`, `VAPID_SUBJECT`); gere com `npx web-push generate-vapid-keys`. Sem chaves, as notificações ficam desligadas.
+- iPhone: só funciona com o site adicionado à tela de início e aberto pelo ícone (iOS 16.4+).
+- Inscrições expiradas (404/410) são apagadas automaticamente.
+
 ## Decisões importantes
 
 - **Agendamento sem conta para o cliente**: menos atrito; ele informa nome e WhatsApp. O histórico de clientes é agrupado pelo telefone.
@@ -147,8 +156,8 @@ O dono pode **desmarcar com motivo** e avisar o cliente, além de enviar **mensa
 
 - [ ] Mover as imagens de `backend/uploads` para um storage (S3/Cloudflare R2) no deploy
 - [ ] Lembretes automáticos por WhatsApp/e-mail
-- [ ] Link para o cliente cancelar/remarcar
+- [x] Link para o cliente cancelar/remarcar
 - [ ] Pagamento da mensalidade por gateway (Pix automático/Asaas/Mercado Pago/Stripe) em vez de baixa manual
 - [ ] Login para profissionais da equipe verem só a própria agenda
 - [ ] Relatórios (faturamento por profissional, serviços mais vendidos)
-- [ ] PWA (instalar no celular como app)
+- [x] PWA (instalar no celular como app) + notificações de agendamento

@@ -1,5 +1,5 @@
 import { Link } from "react-router-dom";
-import { ArrowRight, Ban, CalendarDays, CheckCircle2, Circle, Clock, DollarSign, ListOrdered, Pencil, TrendingUp } from "lucide-react";
+import { ArrowRight, Ban, BellRing, X, CalendarDays, CheckCircle2, Circle, Clock, DollarSign, ListOrdered, Pencil, TrendingUp } from "lucide-react";
 import { EmptyState, PageHeader, Skeleton, StatCard } from "@/components/ui/misc";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { useMe } from "@/features/auth/api";
@@ -9,6 +9,8 @@ import { useBarbershop, useDashboard, useProfessionals, useQueue, useServices } 
 import { AppointmentCard } from "../components/AppointmentCard";
 import { ShareLinkCard } from "../components/ShareLinkCard";
 import { hoursSummary, weekSchedule } from "../components/HoursEditor";
+import { usePush } from "@/lib/push";
+import * as React from "react";
 
 function greeting() {
   const h = new Date().getHours();
@@ -49,6 +51,8 @@ export function DashboardPage() {
           </>
         )}
       </div>
+
+      {!queueMode && <NotificationsPrompt />}
 
       {!queueMode && <WorkScheduleCard />}
 
@@ -200,5 +204,54 @@ function WorkScheduleCard() {
         </div>
       </CardContent>
     </Card>
+  );
+}
+
+const PROMPT_KEY = "navalha:hide-notifications-prompt";
+
+/** Convite para ativar os avisos no celular, até ativar (ou dispensar) neste aparelho */
+function NotificationsPrompt() {
+  const push = usePush();
+  const [hidden, setHidden] = React.useState(() => {
+    try {
+      return localStorage.getItem(PROMPT_KEY) === "1";
+    } catch {
+      return false;
+    }
+  });
+  if (hidden || push.loading || push.state === "on" || push.state === "unsupported") return null;
+
+  const dismiss = () => {
+    try {
+      localStorage.setItem(PROMPT_KEY, "1");
+    } catch {
+      /* sem storage: só esconde agora */
+    }
+    setHidden(true);
+  };
+
+  return (
+    <div className="relative flex items-start gap-3 rounded-2xl bg-zinc-900 p-4 pr-10 text-white">
+      <span className="rounded-xl bg-amber-400/15 p-2.5 text-amber-400">
+        <BellRing className="size-5" />
+      </span>
+      <div className="min-w-0 flex-1">
+        <p className="font-semibold">Receba aviso de novo agendamento</p>
+        <p className="mt-0.5 text-sm text-zinc-400">
+          {push.state === "needs-install"
+            ? "Adicione o Navalha à tela de início do iPhone e ative as notificações."
+            : "Chega no celular quando alguém agendar, remarcar ou desmarcar, igual a um app."}
+        </p>
+        <Link
+          to="/painel/notificacoes"
+          className="mt-3 inline-flex items-center gap-1.5 rounded-xl bg-amber-400 px-3.5 py-2 text-sm font-semibold text-zinc-900 hover:bg-amber-300"
+        >
+          Ver como ativar <ArrowRight className="size-4" />
+        </Link>
+      </div>
+      <button onClick={dismiss} className="absolute top-3 right-3 rounded-lg p-1.5 text-zinc-500 hover:bg-white/10 hover:text-white" aria-label="Dispensar">
+        <X className="size-4" />
+      </button>
+    </div>
   );
 }

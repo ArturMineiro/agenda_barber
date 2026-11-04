@@ -11,6 +11,10 @@ const envSchema = z.object({
   /** Quantos proxies confiáveis na frente da API (nginx da VPS + nginx do container = 2) */
   TRUST_PROXY: z.coerce.number().int().min(0).default(1),
   /** WhatsApp do suporte/admin mostrado aos donos (só dígitos, com DDD) */
+  /** Chaves do Web Push (gerar com: npx web-push generate-vapid-keys). Vazias = notificações desligadas */
+  VAPID_PUBLIC_KEY: z.string().default(""),
+  VAPID_PRIVATE_KEY: z.string().default(""),
+  VAPID_SUBJECT: z.string().default("mailto:suporte@navalha.app"),
   SUPPORT_WHATSAPP: z.string().default("").transform((v) => v.replace(/\D/g, "")),
 });
 

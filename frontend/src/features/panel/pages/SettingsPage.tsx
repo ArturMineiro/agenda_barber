@@ -1,7 +1,7 @@
 import { useForm, useWatch } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { Link } from "react-router-dom";
-import { CalendarDays, ChevronRight, Clock, Instagram, ListOrdered, MapPin } from "lucide-react";
+import { Bell, CalendarDays, ChevronRight, Clock, Instagram, ListOrdered, MapPin } from "lucide-react";
 import { barbershopSettingsSchema, SLOT_INTERVALS, type BarbershopSettingsInput } from "@navalha/shared";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
@@ -215,6 +215,20 @@ export function SettingsPage() {
                 </span>
                 <ChevronRight className="size-4 text-zinc-400" />
               </Link>
+
+              {preview.bookingMode === "SCHEDULE" && (
+                <Link
+                  to="/painel/notificacoes"
+                  className="flex items-center gap-3 rounded-2xl bg-zinc-50 px-4 py-3 ring-1 ring-zinc-200 transition hover:bg-zinc-100"
+                >
+                  <Bell className="size-5 text-zinc-500" />
+                  <span className="flex-1">
+                    <span className="block text-sm font-semibold">Notificações no celular</span>
+                    <span className="block text-xs text-zinc-500">Aviso de novo agendamento, remarcação e cancelamento</span>
+                  </span>
+                  <ChevronRight className="size-4 text-zinc-400" />
+                </Link>
+              )}
 
               {preview.bookingMode === "SCHEDULE" && (
               <div className="grid gap-4 border-t border-zinc-100 pt-5 sm:grid-cols-3">

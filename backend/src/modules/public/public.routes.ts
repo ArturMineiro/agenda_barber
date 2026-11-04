@@ -13,6 +13,7 @@ import { AppError, notFound } from "../../lib/errors";
 import { getAvailability } from "../scheduling/availability.service";
 import { createAppointment } from "../scheduling/booking.service";
 import { getPublicQueue } from "../queue/queue.service";
+import { notifyNewBooking } from "../push/push.service";
 import {
   cancelByClient,
   findByToken,
@@ -103,6 +104,8 @@ publicRoutes.post("/barbershops/:slug/bookings", bookingLimiter, async (req, res
   assertScheduleMode(b);
   const input = createBookingSchema.parse(req.body);
   const appt = await createAppointment({ barbershop: b, input, source: "public" });
+  // avisa o celular do dono sem atrasar a resposta do cliente
+  void notifyNewBooking({ ...appt, barbershop: b });
   res.status(201).json({
     id: appt.id,
     startsAt: appt.startsAt,

@@ -77,6 +77,7 @@ model User {
 
   barbershops  Barbershop[]
   professional Professional?
+  pushSubscriptions PushSubscription[]
 
   @@map("users")
 }
@@ -136,6 +137,7 @@ model Barbershop {
   professionals Professional[]
   appointments  Appointment[]
   queueEntries  QueueEntry[]
+  pushSubscriptions PushSubscription[]
 
   @@index([ownerId])
   @@index([status])
@@ -333,4 +335,23 @@ model QueueEntry {
   @@index([professionalId, status, joinedAt])
   @@index([barbershopId, joinedAt])
   @@map("queue_entries")
+}
+
+/// Celular/navegador que aceitou receber notificações (Web Push) do painel
+model PushSubscription {
+  id           String    @id @default(cuid())
+  userId       String
+  barbershopId String
+  endpoint     String    @unique
+  p256dh       String
+  auth         String
+  userAgent    String?
+  createdAt    DateTime  @default(now())
+  lastUsedAt   DateTime?
+
+  user       User       @relation(fields: [userId], references: [id], onDelete: Cascade)
+  barbershop Barbershop @relation(fields: [barbershopId], references: [id], onDelete: Cascade)
+
+  @@index([barbershopId])
+  @@map("push_subscriptions")
 }

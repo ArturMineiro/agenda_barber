@@ -3,6 +3,7 @@ import { Prisma, type Appointment, type Barbershop } from "@prisma/client";
 import { prisma } from "../../lib/prisma";
 import { AppError, badRequest, conflict, notFound } from "../../lib/errors";
 import { getAvailability } from "./availability.service";
+import { notifyCancel, notifyReschedule } from "../push/push.service";
 
 /**
  * Autoatendimento do cliente pelo link secreto do agendamento (sem login):
@@ -45,10 +46,12 @@ function assertCanSelfManage(appt: Appointment, shop: Barbershop) {
 export async function cancelByClient(token: string, reason?: string | null) {
   const appt = await findByToken(token);
   assertCanSelfManage(appt, appt.barbershop);
-  return prisma.appointment.update({
+  const updated = await prisma.appointment.update({
     where: { id: appt.id },
     data: { status: "CANCELED", canceledAt: new Date(), canceledBy: "client", cancelReason: reason ?? null },
   });
+  void notifyCancel(appt, reason);
+  return updated;
 }
 
 export async function rescheduleAvailability(token: string, date: string, professionalId?: string) {
@@ -87,7 +90,7 @@ export async function rescheduleByClient(token: string, startsAtIso: string, pro
   }
 
   try {
-    return await prisma.$transaction(
+    const updated = await prisma.$transaction(
       async (tx) => {
         const clash = await tx.appointment.findFirst({
           where: {
@@ -103,10 +106,13 @@ export async function rescheduleByClient(token: string, startsAtIso: string, pro
         return tx.appointment.update({
           where: { id: appt.id },
           data: { startsAt, endsAt, professionalId, rescheduleCount: { increment: 1 } },
+          include: { professional: { select: { name: true } } },
         });
       },
       { isolationLevel: Prisma.TransactionIsolationLevel.Serializable },
     );
+    void notifyReschedule({ ...appt, startsAt: updated.startsAt, professional: updated.professional }, appt.startsAt);
+    return updated;
   } catch (err) {
     if (err instanceof Prisma.PrismaClientKnownRequestError && err.code === "P2034") {
       throw conflict("Este horário acabou de ser reservado, escolha outro", "SLOT_UNAVAILABLE");
