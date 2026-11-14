@@ -27,6 +27,52 @@ jobs:
       - name: Build
         run: npm run build
 
+  e2e:
+    name: Testes de ponta a ponta (API + Postgres)
+    runs-on: ubuntu-latest
+    services:
+      postgres:
+        image: postgres:16-alpine
+        env:
+          POSTGRES_USER: navalha
+          POSTGRES_PASSWORD: navalha
+          POSTGRES_DB: navalha_test
+        ports: ["5432:5432"]
+        options: >-
+          --health-cmd "pg_isready -U navalha"
+          --health-interval 5s
+          --health-timeout 5s
+          --health-retries 20
+    env:
+      NODE_ENV: test
+      DATABASE_URL: postgresql://navalha:navalha@localhost:5432/navalha_test?schema=public
+      JWT_SECRET: segredo-usado-so-no-ci-1234567890
+      SEED_ADMIN_EMAIL: admin@ci.local
+      SEED_ADMIN_PASSWORD: senha-do-ci-123
+      E2E_ADMIN_EMAIL: admin@ci.local
+      E2E_ADMIN_PASSWORD: senha-do-ci-123
+      E2E_BASE_URL: http://localhost:3333/api
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+      - run: npm ci
+      - name: Banco (migrações + admin e planos)
+        working-directory: backend
+        run: |
+          npx prisma migrate deploy
+          npx tsx prisma/seed.ts
+      - name: Subir a API
+        working-directory: backend
+        run: nohup npx tsx src/server.ts > api.log 2>&1 &
+      - name: Rodar os cenários
+        run: npm run test:e2e -w backend
+      - name: Log da API (se falhar)
+        if: failure()
+        run: cat backend/api.log
+
   docker:
     name: Imagens Docker
     runs-on: ubuntu-latest
@@ -39,7 +85,7 @@ jobs:
 
   deploy:
     name: Publicar na VPS
-    needs: [check, docker]
+    needs: [check, e2e, docker]
     if: github.event_name != 'pull_request' && github.ref == 'refs/heads/main'
     runs-on: ubuntu-latest
     environment:

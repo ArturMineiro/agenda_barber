@@ -105,6 +105,7 @@ Login do super admin criado pelo seed: `admin@navalha.app` / `admin12345` (mude 
 | `npm run build` | Build de produção dos dois |
 | `npm run db:studio -w backend` | Abre o Prisma Studio para ver/editar o banco |
 | `npm run db:migrate -w backend` | Cria/aplica migrations após mudar o `schema.prisma` |
+| `npm run test:e2e -w backend` | Cenários de ponta a ponta contra uma API rodando (veja *Testes*) |
 
 ## Rotas principais
 
@@ -114,7 +115,7 @@ Login do super admin criado pelo seed: `admin@navalha.app` / `admin12345` (mude 
 | --- | --- |
 | `/` | Landing page |
 | `/cadastro`, `/entrar` | Cadastro do dono / login |
-| `/painel/*` | Painel do dono: início, agenda, serviços, equipe/horários, clientes, ajustes |
+| `/painel/*` | Painel do dono (início, agenda, serviços, equipe, lembretes, clientes, relatórios, avaliações, ajustes) e do barbeiro da equipe (só o que é dele) |
 | `/admin/*` | Super admin: visão geral, barbearias, mensalidades, planos |
 | `/:slug` | Página pública de agendamento da barbearia |
 
@@ -150,6 +151,43 @@ O painel é um **PWA**: o dono adiciona o Navalha à tela de início (ícone igu
 - iPhone: só funciona com o site adicionado à tela de início e aberto pelo ícone (iOS 16.4+).
 - Inscrições expiradas (404/410) são apagadas automaticamente.
 
+### Lembrete do dia seguinte
+
+No horário escolhido em Ajustes (padrão 19h, no fuso da barbearia) o dono recebe no celular **"Amanhã: N clientes"**. Ao tocar, abre **Lembretes**: um toque em cada cliente abre o WhatsApp com a mensagem pronta ("amanhã (sábado) às 14:00…") e marca como lembrado. O botão "Lembrar fulano · 14:00" vai de um em um. Sem API paga: o envio é pelo WhatsApp do próprio dono.
+
+### Barbeiros da equipe com login
+
+Em **Equipe → editar profissional → Acesso ao painel**, o dono cria o login com o e-mail do barbeiro. A senha temporária vai pelo WhatsApp e é trocada no primeiro acesso. O barbeiro vê só **a própria** agenda, fila, lembretes, folgas, números e notificações.
+
+- As permissões são uma **lista do que é permitido** (`BARBER_ROUTES` em `panel.routes.ts`): rota nova do painel fica bloqueada para o barbeiro até entrar na lista.
+- Agenda, horários livres, fila, folgas, lembretes e relatórios são filtrados pelo profissional **no servidor** (`req.scopeProfessionalId`).
+- Profissional desativado perde o acesso; excluído, o login é apagado.
+
+### Relatórios
+
+**Mais → Relatórios** (este mês, mês passado, últimos 30 dias, ano): faturamento comparado ao período anterior, atendimentos, ticket médio, taxa de faltas, clientes novos, cancelamentos, faturamento por profissional (com nota), serviços que mais faturam e atendimentos por dia da semana. No modo fila, conta os atendimentos concluídos.
+
+### Senhas
+
+- Qualquer usuário troca a senha pelo ícone de chave no topo. Trocar a senha **derruba as sessões abertas nos outros aparelhos** (`tokenVersion` no token).
+- **Esqueci minha senha** (sem e-mail): o link do login abre o WhatsApp do suporte; o admin gera uma **senha temporária** em Barbearias → Responsável. Quem entra com ela precisa criar a própria antes de usar o painel.
+
+### Fuso horário
+
+Ajustes → **Fuso horário** (Brasília, AM, MT, MS, RO, RR, AC, Noronha). A grade, os horários livres, o painel e as páginas públicas usam o fuso da barbearia, não o do aparelho.
+
+## Testes
+
+`backend/tests/e2e.mjs` percorre a API de verdade: horário duplo, faltas, folgas, semana, fuso, lembretes, relatórios, senhas, permissões do barbeiro e fila. No CI ele roda num Postgres vazio antes do deploy (job *Testes de ponta a ponta*); se falhar, não publica.
+
+Para rodar local, com a API de pé num banco de teste:
+
+```bash
+E2E_BASE_URL=http://localhost:3333/api E2E_ADMIN_EMAIL=admin@navalha.app E2E_ADMIN_PASSWORD=admin12345 DATABASE_URL=<o mesmo banco da API> npm run test:e2e -w backend
+```
+
+Use um banco separado: o teste cria barbearias novas a cada execução.
+
 ## Decisões importantes
 
 - **Agendamento sem conta para o cliente**: menos atrito; ele informa nome e WhatsApp. O histórico de clientes é agrupado pelo telefone.
@@ -163,9 +201,12 @@ O painel é um **PWA**: o dono adiciona o Navalha à tela de início (ícone igu
 ## Próximos passos sugeridos
 
 - [ ] Mover as imagens de `backend/uploads` para um storage (S3/Cloudflare R2) no deploy
-- [ ] Lembretes automáticos por WhatsApp/e-mail
+- [x] Lembrete do dia seguinte (WhatsApp em 1 toque + aviso no celular)
+- [ ] Lembrete 100% automático (exige a API paga do WhatsApp Business)
 - [x] Link para o cliente cancelar/remarcar
 - [ ] Pagamento da mensalidade por gateway (Pix automático/Asaas/Mercado Pago/Stripe) em vez de baixa manual
-- [ ] Login para profissionais da equipe verem só a própria agenda
-- [ ] Relatórios (faturamento por profissional, serviços mais vendidos)
+- [x] Login para profissionais da equipe verem só a própria agenda
+- [x] Relatórios (faturamento por profissional, serviços mais vendidos)
+- [x] Fuso horário por barbearia
+- [x] Recuperar senha sem e-mail (senha temporária pelo admin)
 - [x] PWA (instalar no celular como app) + notificações de agendamento
