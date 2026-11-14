@@ -120,6 +120,8 @@ export interface Professional {
   queueOpen: boolean;
   serviceIds: string[];
   workingHours: WorkingHour[];
+  /** login próprio: OWNER = é o dono; BARBER = barbeiro da equipe com acesso ao painel */
+  user: { email: string; role: Role } | null;
 }
 
 export interface Appointment {

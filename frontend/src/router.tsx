@@ -21,7 +21,8 @@ export const router = createBrowserRouter([
     ],
   },
   {
-    element: <RequireAuth roles={["OWNER"]} />,
+    // dono e barbeiro da equipe (o barbeiro vê só a própria agenda)
+    element: <RequireAuth roles={["OWNER", "BARBER"]} />,
     children: [
       {
         path: "/painel",
@@ -32,6 +33,7 @@ export const router = createBrowserRouter([
           { path: "fila", lazy: page(() => import("@/features/panel/pages/QueuePage"), "QueuePage") },
           { path: "servicos", lazy: page(() => import("@/features/panel/pages/ServicesPage"), "ServicesPage") },
           { path: "equipe", lazy: page(() => import("@/features/panel/pages/TeamPage"), "TeamPage") },
+          { path: "folgas", lazy: page(() => import("@/features/panel/pages/TimeOffPage"), "TimeOffPage") },
           { path: "relatorios", lazy: page(() => import("@/features/panel/pages/ReportsPage"), "ReportsPage") },
           { path: "lembretes", lazy: page(() => import("@/features/panel/pages/RemindersPage"), "RemindersPage") },
           { path: "avaliacoes", lazy: page(() => import("@/features/panel/pages/ReviewsPage"), "ReviewsPage") },

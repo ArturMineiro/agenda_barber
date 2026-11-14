@@ -25,11 +25,20 @@ export interface PushPayload {
   tag?: string;
 }
 
-/** Envia para todos os aparelhos inscritos da barbearia. Nunca lança erro: notificação não pode quebrar o agendamento. */
-export async function notifyBarbershop(barbershopId: string, payload: PushPayload) {
+/**
+ * Envia para os aparelhos do dono e, se o aviso for de um profissional, também para o barbeiro dele
+ * (barbeiro da equipe não recebe os clientes dos colegas).
+ * Nunca lança erro: notificação não pode quebrar o agendamento.
+ */
+export async function notifyBarbershop(barbershopId: string, payload: PushPayload, professionalId?: string) {
   if (!pushEnabled) return;
   try {
-    const subs = await prisma.pushSubscription.findMany({ where: { barbershopId } });
+    const subs = await prisma.pushSubscription.findMany({
+      where: {
+        barbershopId,
+        OR: [{ user: { role: { not: "BARBER" } } }, ...(professionalId ? [{ user: { professional: { id: professionalId } } }] : [])],
+      },
+    });
     await Promise.all(subs.map((s) => sendTo(s, payload)));
   } catch (err) {
     console.error("[push] falha ao notificar", err);
@@ -64,6 +73,7 @@ export async function sendTo(
 
 interface ApptInfo {
   barbershopId: string;
+  professionalId: string;
   clientName: string;
   startsAt: Date;
   service: { name: string };
@@ -88,7 +98,7 @@ export function notifyNewBooking(a: ApptInfo) {
     title: "✂️ Novo agendamento",
     body: `${a.clientName} · ${a.service.name}${withPro(a)} · ${when(a.startsAt, a.barbershop.timezone)}`,
     url: agendaUrl(a),
-  });
+  }, a.professionalId);
 }
 
 export function notifyReschedule(a: ApptInfo, previous: Date) {
@@ -96,7 +106,7 @@ export function notifyReschedule(a: ApptInfo, previous: Date) {
     title: "🔁 Horário remarcado",
     body: `${a.clientName} mudou de ${when(previous, a.barbershop.timezone)} para ${when(a.startsAt, a.barbershop.timezone)} · ${a.service.name}${withPro(a)}`,
     url: agendaUrl(a),
-  });
+  }, a.professionalId);
 }
 
 export function notifyCancel(a: ApptInfo, reason?: string | null) {
@@ -104,5 +114,5 @@ export function notifyCancel(a: ApptInfo, reason?: string | null) {
     title: "❌ Horário desmarcado",
     body: `${a.clientName} desmarcou ${a.service.name}${withPro(a)} de ${when(a.startsAt, a.barbershop.timezone)}${reason ? ` — "${reason}"` : ""}`,
     url: agendaUrl(a),
-  });
+  }, a.professionalId);
 }

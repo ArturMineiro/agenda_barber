@@ -29,7 +29,7 @@ export function DashboardPage() {
     <div className="space-y-6">
       <PageHeader title={`${greeting()}, ${user?.name.split(" ")[0] ?? ""}`} description="Veja como está o movimento hoje." />
 
-      {shop.status === "PENDING" && <Onboarding />}
+      {shop.status === "PENDING" && user?.role !== "BARBER" && <Onboarding />}
 
       <ShareLinkCard shop={shop} />
 
@@ -190,6 +190,9 @@ function Onboarding() {
 function WorkScheduleCard() {
   const { data: shop } = useBarbershop();
   const { data: pros } = useProfessionals();
+  const { data: user } = useMe();
+  // barbeiro: a grade é do dono; ele marca só as próprias folgas
+  const barber = user?.role === "BARBER";
   const active = pros?.filter((p) => p.active) ?? [];
   if (!shop || !active.length) return null;
   const solo = active.length === 1;
@@ -222,11 +225,16 @@ function WorkScheduleCard() {
             ))}
           </ul>
         )}
-        <div className="grid grid-cols-2 gap-2">
-          <Link to="/painel/equipe" className="inline-flex h-10 items-center justify-center gap-2 rounded-xl bg-zinc-900 text-sm font-medium text-white hover:bg-zinc-800">
-            <Pencil className="size-4" /> Editar horários
-          </Link>
-          <Link to="/painel/equipe?folga=1" className="inline-flex h-10 items-center justify-center gap-2 rounded-xl border border-zinc-200 text-sm font-medium hover:bg-zinc-50">
+        <div className={cn("grid gap-2", barber ? "grid-cols-1" : "grid-cols-2")}>
+          {!barber && (
+            <Link to="/painel/equipe" className="inline-flex h-10 items-center justify-center gap-2 rounded-xl bg-zinc-900 text-sm font-medium text-white hover:bg-zinc-800">
+              <Pencil className="size-4" /> Editar horários
+            </Link>
+          )}
+          <Link
+            to={barber ? "/painel/folgas?folga=1" : "/painel/equipe?folga=1"}
+            className="inline-flex h-10 items-center justify-center gap-2 rounded-xl border border-zinc-200 text-sm font-medium hover:bg-zinc-50"
+          >
             <Ban className="size-4" /> Marcar folga
           </Link>
         </div>

@@ -5,6 +5,8 @@ declare global {
     interface Request {
       user?: Omit<User, "passwordHash" | "tokenVersion">;
       barbershop?: Barbershop;
+      /** login de barbeiro da equipe: tudo filtrado por este profissional */
+      scopeProfessionalId?: string;
     }
   }
 }

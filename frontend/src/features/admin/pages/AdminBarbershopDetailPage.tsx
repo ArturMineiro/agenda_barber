@@ -1,7 +1,7 @@
 import * as React from "react";
 import { Link, useParams } from "react-router-dom";
-import { ArrowLeft, Copy, ExternalLink, KeyRound, Mail, MessageCircle, Pause, Play, Receipt } from "lucide-react";
-import { toast } from "sonner";
+import { ArrowLeft, ExternalLink, KeyRound, Mail, MessageCircle, Pause, Play, Receipt } from "lucide-react";
+import { TempPasswordDialog } from "@/components/TempPasswordDialog";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Dialog } from "@/components/ui/dialog";
@@ -151,12 +151,6 @@ export function AdminBarbershopDetailPage() {
 function ResetOwnerPassword({ shop }: { shop: AdminBarbershop }) {
   const reset = useResetOwnerPassword();
   const [temp, setTemp] = React.useState<string | null>(null);
-  const loginUrl = `${window.location.origin}/entrar`;
-  const message = temp
-    ? `Olá ${shop.owner.name.split(" ")[0]}! Sua senha temporária do Navalha é: *${temp}*
-
-Entre em ${loginUrl} com o e-mail ${shop.owner.email} e crie uma senha nova no primeiro acesso.`
-    : "";
 
   return (
     <>
@@ -172,40 +166,15 @@ Entre em ${loginUrl} com o e-mail ${shop.owner.email} e crie uma senha nova no p
       >
         <KeyRound /> Gerar senha temporária
       </Button>
-      <Dialog
-        open={!!temp}
+      <TempPasswordDialog
+        password={temp}
         onClose={() => setTemp(null)}
         title="Senha temporária criada"
-        description="Mostrada só agora. No primeiro acesso o dono cria uma senha nova."
-        footer={
-          <>
-            <Button variant="outline" onClick={() => setTemp(null)} className="flex-1 sm:flex-none">
-              Fechar
-            </Button>
-            {shop.owner.phone && (
-              <a href={whatsappLink(shop.owner.phone, message)} target="_blank" rel="noreferrer" className="flex-1 sm:flex-none">
-                <Button variant="success" className="w-full">
-                  <MessageCircle /> Enviar no WhatsApp
-                </Button>
-              </a>
-            )}
-          </>
-        }
-      >
-        <div className="flex items-center justify-between gap-3 rounded-xl bg-zinc-100 px-4 py-3">
-          <span className="font-mono text-2xl font-semibold tracking-wider">{temp}</span>
-          <Button
-            size="sm"
-            variant="ghost"
-            onClick={async () => {
-              await navigator.clipboard.writeText(message);
-              toast.success("Mensagem copiada");
-            }}
-          >
-            <Copy /> Copiar
-          </Button>
-        </div>
-      </Dialog>
+        name={shop.owner.name}
+        email={shop.owner.email}
+        phone={shop.owner.phone}
+        context={`ao painel da ${shop.name}`}
+      />
     </>
   );
 }

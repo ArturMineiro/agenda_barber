@@ -37,7 +37,7 @@ export async function reviewByClient(token: string, input: z.output<typeof revie
       body: `${appt.clientName} · ${appt.service.name}${review.comment ? ` — "${review.comment}"` : ""}`,
       url: "/painel/avaliacoes",
       tag: `review-${review.id}`,
-    });
+    }); // avaliações ficam com o dono (barbeiro não acessa a tela)
   }
   return review;
 }

@@ -98,15 +98,15 @@ export async function addToQueue(barbershop: Barbershop, input: QueueEntryInput)
   });
 }
 
-async function findEntry(barbershop: Barbershop, id: string) {
-  const entry = await prisma.queueEntry.findFirst({ where: { id, barbershopId: barbershop.id } });
+async function findEntry(barbershop: Barbershop, id: string, professionalId?: string) {
+  const entry = await prisma.queueEntry.findFirst({ where: { id, barbershopId: barbershop.id, ...(professionalId ? { professionalId } : {}) } });
   if (!entry) throw notFound("Cliente não encontrado na fila");
   return entry;
 }
 
 /** Muda o status de um cliente. Só um cliente por vez na cadeira de cada barbeiro. */
-export async function setQueueStatus(barbershop: Barbershop, id: string, status: QueueStatus) {
-  const entry = await findEntry(barbershop, id);
+export async function setQueueStatus(barbershop: Barbershop, id: string, status: QueueStatus, professionalId?: string) {
+  const entry = await findEntry(barbershop, id, professionalId);
   const now = new Date();
 
   if (status === "IN_SERVICE") {

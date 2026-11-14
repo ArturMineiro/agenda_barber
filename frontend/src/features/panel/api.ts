@@ -131,6 +131,34 @@ export function useDeleteProfessional() {
   });
 }
 
+// ---------- Acesso do barbeiro ao painel ----------
+
+export interface AccessResult {
+  email: string;
+  tempPassword: string;
+}
+
+export function useProfessionalAccess(professionalId: string) {
+  const qc = useQueryClient();
+  const refresh = () => qc.invalidateQueries({ queryKey: panelKeys.professionals() });
+  return {
+    create: useMutation({
+      mutationFn: (email: string) => api.post<AccessResult>(`/panel/professionals/${professionalId}/access`, { email }),
+      onSuccess: refresh,
+    }),
+    reset: useMutation({
+      mutationFn: () => api.post<AccessResult>(`/panel/professionals/${professionalId}/access/reset`),
+    }),
+    remove: useMutation({
+      mutationFn: () => api.delete(`/panel/professionals/${professionalId}/access`),
+      onSuccess: () => {
+        refresh();
+        toast.success("Acesso removido");
+      },
+    }),
+  };
+}
+
 export function useSaveHours() {
   const qc = useQueryClient();
   return useMutation({

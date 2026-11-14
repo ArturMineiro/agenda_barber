@@ -6,6 +6,7 @@ import { EmptyState, PageHeader, Skeleton } from "@/components/ui/misc";
 import { messages, sendWhatsApp } from "@/lib/messages";
 import { addDaysToKey, cn, formatDateKeyLong, formatTime, todayKey } from "@/lib/utils";
 import { useBarbershop, useMarkReminder, useReminders, type ReminderItem } from "../api";
+import { useMe } from "@/features/auth/api";
 
 /**
  * Lembretes do dia seguinte: um toque abre o WhatsApp do cliente com a mensagem pronta
@@ -18,6 +19,7 @@ export function RemindersPage() {
   const { data: shop } = useBarbershop();
   const { data, isLoading } = useReminders(date);
   const mark = useMarkReminder();
+  const { data: user } = useMe();
 
   const list = data?.appointments ?? [];
   const done = list.filter((a) => a.reminderSentAt).length;
@@ -127,7 +129,7 @@ export function RemindersPage() {
         </>
       )}
 
-      {shop && (
+      {shop && user?.role !== "BARBER" && (
         <p className="text-center text-xs text-zinc-500">
           {shop.reminderDigestHour === null ? "Aviso no celular desligado" : `Você recebe um aviso no celular às ${shop.reminderDigestHour}h com os clientes do dia seguinte`}
           {" · "}

@@ -19,8 +19,9 @@ import { prisma } from "../../lib/prisma";
 import { env } from "../../config/env";
 import { badRequest, conflict, forbidden, notFound } from "../../lib/errors";
 import { startOfDayInZone } from "../../lib/time";
-import { loadOwnerBarbershop, requireAuth, requireRole } from "../../middlewares/auth";
-import { isSlugAvailable } from "../auth/auth.service";
+import { barberAllowlist, loadPanelContext, requireAuth, requireRole } from "../../middlewares/auth";
+import { isSlugAvailable, setTemporaryPassword, temporaryPassword } from "../auth/auth.service";
+import bcrypt from "bcryptjs";
 import { BLOCKING_STATUSES, getAvailability } from "../scheduling/availability.service";
 import { assertSlotFree, createAppointment, inSlotTransaction } from "../scheduling/booking.service";
 import { deleteImage } from "../uploads/uploads.service";
@@ -28,9 +29,33 @@ import { listReminders, markReminderSent } from "../reminders/reminders.service"
 import { buildReport } from "../reports/reports.service";
 
 export const panelRoutes = Router();
-panelRoutes.use(requireAuth, requireRole("OWNER"), loadOwnerBarbershop);
+
+/** O que o barbeiro da equipe pode usar no painel; o resto (ajustes, serviços, equipe, clientes…) é só do dono */
+const BARBER_ROUTES: [string, RegExp][] = [
+  ["GET", /^\/barbershop$/],
+  ["GET", /^\/dashboard$/],
+  ["GET", /^\/services$/],
+  ["GET", /^\/professionals$/],
+  ["GET", /^\/appointments$/],
+  ["GET", /^\/availability$/],
+  ["POST", /^\/appointments$/],
+  ["PATCH", /^\/appointments\/[^/]+\/status$/],
+  ["POST", /^\/appointments\/[^/]+\/cancel$/],
+  ["POST", /^\/appointments\/[^/]+\/reminder$/],
+  ["GET", /^\/reminders$/],
+  ["GET", /^\/reports$/],
+  ["GET", /^\/time-offs$/],
+  ["POST", /^\/time-offs$/],
+  ["DELETE", /^\/time-offs\/[^/]+$/],
+];
+
+panelRoutes.use(requireAuth, requireRole("OWNER", "BARBER"), loadPanelContext, barberAllowlist(BARBER_ROUTES));
 
 const shop = (req: Request) => req.barbershop!;
+/** Barbeiro logado: o id do profissional dele (undefined para o dono) */
+const scope = (req: Request) => req.scopeProfessionalId;
+/** Filtro do Prisma: barbeiro só enxerga o que é dele */
+const own = (req: Request) => (scope(req) ? { professionalId: scope(req) } : {});
 
 // ---------- Barbearia ----------
 
@@ -38,16 +63,19 @@ panelRoutes.get("/barbershop", async (req, res) => {
   const barbershop = await prisma.barbershop.findUnique({
     where: { id: shop(req).id },
     include: {
-      subscription: {
-        include: {
-          plan: true,
-          payments: { where: { status: { in: ["PENDING", "OVERDUE"] } }, orderBy: { dueDate: "asc" } },
-        },
-      },
+      // mensalidade e plano são assunto do dono
+      subscription: scope(req)
+        ? false
+        : {
+            include: {
+              plan: true,
+              payments: { where: { status: { in: ["PENDING", "OVERDUE"] } }, orderBy: { dueDate: "asc" } },
+            },
+          },
       _count: { select: { professionals: { where: { active: true } } } },
     },
   });
-  res.json(barbershop);
+  res.json({ ...barbershop, subscription: barbershop?.subscription ?? null });
 });
 
 panelRoutes.put("/barbershop", async (req, res) => {
@@ -87,12 +115,12 @@ panelRoutes.get("/dashboard", async (req, res) => {
   if (b.bookingMode === "QUEUE") {
     const [today, month] = await Promise.all([
       prisma.queueEntry.aggregate({
-        where: { barbershopId: b.id, joinedAt: { gte: todayStart }, status: { in: ["DONE", "IN_SERVICE", "WAITING"] } },
+        where: { barbershopId: b.id, ...own(req), joinedAt: { gte: todayStart }, status: { in: ["DONE", "IN_SERVICE", "WAITING"] } },
         _count: true,
         _sum: { priceCents: true },
       }),
       prisma.queueEntry.aggregate({
-        where: { barbershopId: b.id, joinedAt: { gte: monthStart }, status: "DONE" },
+        where: { barbershopId: b.id, ...own(req), joinedAt: { gte: monthStart }, status: "DONE" },
         _count: true,
         _sum: { priceCents: true },
       }),
@@ -107,17 +135,17 @@ panelRoutes.get("/dashboard", async (req, res) => {
   const notCanceled = { status: { not: "CANCELED" as const } };
   const [today, month, upcoming] = await Promise.all([
     prisma.appointment.aggregate({
-      where: { barbershopId: b.id, startsAt: { gte: todayStart, lte: todayEnd }, ...notCanceled },
+      where: { barbershopId: b.id, ...own(req), startsAt: { gte: todayStart, lte: todayEnd }, ...notCanceled },
       _count: true,
       _sum: { priceCents: true },
     }),
     prisma.appointment.aggregate({
-      where: { barbershopId: b.id, startsAt: { gte: monthStart, lte: now.toJSDate() }, status: { in: ["CONFIRMED", "COMPLETED"] } },
+      where: { barbershopId: b.id, ...own(req), startsAt: { gte: monthStart, lte: now.toJSDate() }, status: { in: ["CONFIRMED", "COMPLETED"] } },
       _count: true,
       _sum: { priceCents: true },
     }),
     prisma.appointment.findMany({
-      where: { barbershopId: b.id, startsAt: { gte: now.toJSDate() }, status: "CONFIRMED" },
+      where: { barbershopId: b.id, ...own(req), startsAt: { gte: now.toJSDate() }, status: "CONFIRMED" },
       orderBy: { startsAt: "asc" },
       take: 5,
       include: { service: { select: { name: true } }, professional: { select: { name: true } } },
@@ -213,9 +241,9 @@ const professionalInclude = {
 
 panelRoutes.get("/professionals", async (req, res) => {
   const pros = await prisma.professional.findMany({
-    where: { barbershopId: shop(req).id },
+    where: { barbershopId: shop(req).id, ...(scope(req) ? { id: scope(req) } : {}) },
     orderBy: { createdAt: "asc" },
-    include: professionalInclude,
+    include: { ...professionalInclude, user: { select: { email: true, role: true } } },
   });
   res.json(pros.map(({ services, ...p }) => ({ ...p, serviceIds: services.map((s) => s.serviceId) })));
 });
@@ -274,7 +302,50 @@ panelRoutes.delete("/professionals/:id", async (req, res) => {
   else {
     await prisma.professional.delete({ where: { id: pro.id } });
     await deleteImage(pro.avatarUrl, shop(req).id);
+    // o login do barbeiro não serve para mais nada (inativo já é bloqueado no login)
+    if (pro.userId) await prisma.user.deleteMany({ where: { id: pro.userId, role: "BARBER" } });
   }
+  res.status(204).end();
+});
+
+// ---------- Acesso do barbeiro ao painel ----------
+
+/** Profissional da equipe com login próprio (não o dono) */
+async function findBarberUser(req: Request) {
+  const pro = await findOwnProfessional(req);
+  const user = pro.userId ? await prisma.user.findUnique({ where: { id: pro.userId } }) : null;
+  if (user && user.role !== "BARBER") throw badRequest("Este profissional é o dono da barbearia");
+  return { pro, user };
+}
+
+/** Cria o login do barbeiro: e-mail + senha temporária (ele cria a própria no primeiro acesso) */
+panelRoutes.post("/professionals/:id/access", async (req, res) => {
+  const { email } = z.object({ email: z.string().trim().toLowerCase().pipe(z.email("E-mail inválido")) }).parse(req.body);
+  const { pro, user } = await findBarberUser(req);
+  if (user) throw conflict("Este profissional já tem acesso");
+  if (await prisma.user.findUnique({ where: { email }, select: { id: true } })) {
+    throw conflict("Este e-mail já é usado por outra conta", "EMAIL_TAKEN");
+  }
+  const tempPassword = temporaryPassword();
+  await prisma.$transaction(async (tx) => {
+    const created = await tx.user.create({
+      data: { name: pro.name, email, role: "BARBER", mustChangePassword: true, passwordHash: await bcrypt.hash(tempPassword, 10) },
+    });
+    await tx.professional.update({ where: { id: pro.id }, data: { userId: created.id } });
+  });
+  res.status(201).json({ email, tempPassword });
+});
+
+/** Barbeiro esqueceu a senha: nova senha temporária (derruba as sessões abertas dele) */
+panelRoutes.post("/professionals/:id/access/reset", async (req, res) => {
+  const { user } = await findBarberUser(req);
+  if (!user) throw notFound("Este profissional ainda não tem acesso");
+  res.json({ email: user.email, tempPassword: await setTemporaryPassword(user.id) });
+});
+
+panelRoutes.delete("/professionals/:id/access", async (req, res) => {
+  const { user } = await findBarberUser(req);
+  if (user) await prisma.user.delete({ where: { id: user.id } }); // professional.userId vira null
   res.status(204).end();
 });
 
@@ -293,7 +364,7 @@ panelRoutes.put("/professionals/:id/hours", async (req, res) => {
 panelRoutes.get("/time-offs", async (req, res) => {
   res.json(
     await prisma.timeOff.findMany({
-      where: { professional: { barbershopId: shop(req).id }, endsAt: { gte: new Date() } },
+      where: { professional: { barbershopId: shop(req).id }, ...own(req), endsAt: { gte: new Date() } },
       orderBy: { startsAt: "asc" },
       include: { professional: { select: { name: true } } },
     }),
@@ -303,7 +374,8 @@ panelRoutes.get("/time-offs", async (req, res) => {
 panelRoutes.post("/time-offs", async (req, res) => {
   const input = timeOffSchema.parse(req.body);
   const pro = await prisma.professional.findFirst({
-    where: { id: input.professionalId, barbershopId: shop(req).id },
+    // barbeiro só marca folga para si mesmo
+    where: { id: scope(req) ?? input.professionalId, barbershopId: shop(req).id },
   });
   if (!pro) throw notFound("Profissional não encontrado");
   const startsAt = new Date(input.startsAt);
@@ -320,7 +392,7 @@ panelRoutes.post("/time-offs", async (req, res) => {
 
 panelRoutes.delete("/time-offs/:id", async (req, res) => {
   const { count } = await prisma.timeOff.deleteMany({
-    where: { id: req.params.id, professional: { barbershopId: shop(req).id } },
+    where: { id: req.params.id, professional: { barbershopId: shop(req).id }, ...own(req) },
   });
   if (!count) throw notFound();
   res.status(204).end();
@@ -338,6 +410,7 @@ panelRoutes.get("/appointments", async (req, res) => {
         barbershopId: shop(req).id,
         startsAt: { gte: day.toJSDate(), lte: last.toJSDate() },
         ...(professionalId ? { professionalId } : {}),
+        ...own(req),
       },
       orderBy: { startsAt: "asc" },
       include: {
@@ -350,17 +423,19 @@ panelRoutes.get("/appointments", async (req, res) => {
 
 panelRoutes.get("/availability", async (req, res) => {
   const query = availabilityQuerySchema.parse(req.query);
-  res.json(await getAvailability({ barbershop: shop(req), ...query, ignoreBookingWindow: true }));
+  res.json(await getAvailability({ barbershop: shop(req), ...query, ...own(req), ignoreBookingWindow: true }));
 });
 
 panelRoutes.post("/appointments", async (req, res) => {
   const input = manualAppointmentSchema.parse(req.body);
+  // barbeiro só agenda na própria cadeira
+  if (scope(req) && input.professionalId !== scope(req)) throw forbidden("Você só pode agendar na sua própria agenda");
   res.status(201).json(await createAppointment({ barbershop: shop(req), input, source: "panel" }));
 });
 
 panelRoutes.patch("/appointments/:id/status", async (req, res) => {
   const { status } = updateAppointmentStatusSchema.parse(req.body);
-  const appt = await prisma.appointment.findFirst({ where: { id: String(req.params.id), barbershopId: shop(req).id } });
+  const appt = await prisma.appointment.findFirst({ where: { id: String(req.params.id), barbershopId: shop(req).id, ...own(req) } });
   if (!appt) throw notFound("Agendamento não encontrado");
 
   const data =
@@ -391,19 +466,19 @@ panelRoutes.patch("/appointments/:id/status", async (req, res) => {
 
 panelRoutes.get("/reports", async (req, res) => {
   const { from, to } = z.object({ from: dateStringSchema, to: dateStringSchema }).parse(req.query);
-  res.json(await buildReport(shop(req), from, to));
+  res.json(await buildReport(shop(req), from, to, scope(req)));
 });
 
 // ---------- Lembretes (dia seguinte) ----------
 
 panelRoutes.get("/reminders", async (req, res) => {
   const { date } = z.object({ date: dateStringSchema.optional() }).parse(req.query);
-  res.json(await listReminders(shop(req), date));
+  res.json(await listReminders(shop(req), date, scope(req)));
 });
 
 /** O dono abriu o WhatsApp com o lembrete: marca como lembrado */
 panelRoutes.post("/appointments/:id/reminder", async (req, res) => {
-  await markReminderSent(shop(req).id, String(req.params.id));
+  await markReminderSent(shop(req).id, String(req.params.id), scope(req));
   res.json({ ok: true });
 });
 
@@ -411,7 +486,7 @@ panelRoutes.post("/appointments/:id/reminder", async (req, res) => {
 panelRoutes.post("/appointments/:id/cancel", async (req, res) => {
   const { reason } = cancelAppointmentSchema.parse(req.body);
   const { count } = await prisma.appointment.updateMany({
-    where: { id: String(req.params.id), barbershopId: shop(req).id, status: { not: "CANCELED" } },
+    where: { id: String(req.params.id), barbershopId: shop(req).id, ...own(req), status: { not: "CANCELED" } },
     data: { status: "CANCELED", canceledAt: new Date(), canceledBy: "barbershop", cancelReason: reason ?? null },
   });
   if (!count) throw notFound("Agendamento não encontrado ou já cancelado");

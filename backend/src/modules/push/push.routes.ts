@@ -3,12 +3,13 @@ import { z } from "zod";
 import { prisma } from "../../lib/prisma";
 import { AppError } from "../../lib/errors";
 import { env } from "../../config/env";
-import { loadOwnerBarbershop, requireAuth, requireRole } from "../../middlewares/auth";
+import { loadPanelContext, requireAuth, requireRole } from "../../middlewares/auth";
 import { pushEnabled, sendTo } from "./push.service";
 
 /** Notificações do painel: /api/panel/push */
 export const pushRoutes = Router();
-pushRoutes.use(requireAuth, requireRole("OWNER"), loadOwnerBarbershop);
+// barbeiro da equipe recebe só os avisos dos próprios clientes (ver notifyBarbershop)
+pushRoutes.use(requireAuth, requireRole("OWNER", "BARBER"), loadPanelContext);
 
 const subscriptionSchema = z.object({
   endpoint: z.url().max(1000),
@@ -21,7 +22,9 @@ function assertEnabled() {
 
 /** Chave pública + quantos aparelhos já recebem avisos */
 pushRoutes.get("/", async (req, res) => {
-  const devices = await prisma.pushSubscription.count({ where: { barbershopId: req.barbershop!.id } });
+  // barbeiro vê (e testa) só os próprios aparelhos
+  const mine = req.user!.role === "BARBER" ? { userId: req.user!.id } : {};
+  const devices = await prisma.pushSubscription.count({ where: { barbershopId: req.barbershop!.id, ...mine } });
   res.json({ enabled: pushEnabled, publicKey: env.VAPID_PUBLIC_KEY || null, devices });
 });
 
@@ -52,7 +55,7 @@ pushRoutes.post("/test", async (req, res) => {
   assertEnabled();
   const { endpoint } = z.object({ endpoint: z.string().optional() }).parse(req.body ?? {});
   const subs = await prisma.pushSubscription.findMany({
-    where: { barbershopId: req.barbershop!.id, ...(endpoint ? { endpoint } : {}) },
+    where: { barbershopId: req.barbershop!.id, ...(req.user!.role === "BARBER" ? { userId: req.user!.id } : {}), ...(endpoint ? { endpoint } : {}) },
   });
   if (!subs.length) throw new AppError(404, "Nenhum aparelho com notificações ativas", "NO_DEVICES");
   const results = await Promise.all(

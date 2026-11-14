@@ -58,3 +58,33 @@ export async function loadOwnerBarbershop(req: Request, _res: Response, next: Ne
   req.barbershop = barbershop;
   next();
 }
+
+/**
+ * Painel para dono E barbeiro da equipe.
+ * - Dono: carrega a barbearia dele (igual a loadOwnerBarbershop).
+ * - Barbeiro: carrega a barbearia do profissional ligado ao login e grava req.scopeProfessionalId:
+ *   as rotas filtram tudo por ele (só a própria agenda, fila, folgas e números).
+ */
+export async function loadPanelContext(req: Request, res: Response, next: NextFunction) {
+  if (req.user!.role !== "BARBER") return loadOwnerBarbershop(req, res, next);
+
+  const pro = await prisma.professional.findUnique({ where: { userId: req.user!.id }, include: { barbershop: true } });
+  if (!pro) throw forbidden("Seu acesso não está ligado a nenhuma barbearia");
+  if (!pro.active) throw forbidden("Seu acesso está desativado. Fale com o dono da barbearia.");
+
+  req.barbershop = pro.barbershop;
+  req.scopeProfessionalId = pro.id;
+  next();
+}
+
+/**
+ * Lista do que o barbeiro pode acessar (o resto é só do dono).
+ * Rota nova fica bloqueada para o barbeiro até entrar aqui — seguro por padrão.
+ */
+export function barberAllowlist(rules: [method: string, path: RegExp][]) {
+  return (req: Request, _res: Response, next: NextFunction) => {
+    if (req.user?.role !== "BARBER") return next();
+    if (rules.some(([m, p]) => m === req.method && p.test(req.path))) return next();
+    throw forbidden("Só o dono da barbearia pode fazer isso");
+  };
+}

@@ -91,13 +91,15 @@ export async function changePassword(userId: string, input: z.output<typeof chan
 /** Sem letras/números que se confundem (l, 1, o, 0, i): fácil de ditar ou digitar */
 const TEMP_ALPHABET = "abcdefghjkmnpqrstuvwxyz23456789";
 const tempChunk = () => Array.from({ length: 4 }, () => TEMP_ALPHABET[randomInt(TEMP_ALPHABET.length)]).join("");
+/** ex.: k7mp-x3qa */
+export const temporaryPassword = () => `${tempChunk()}-${tempChunk()}`;
 
 /**
  * "Esqueci minha senha" sem e-mail: gera uma senha temporária (ex.: k7mp-x3qa),
  * derruba as sessões abertas e pede para criar uma nova no próximo acesso.
  */
 export async function setTemporaryPassword(userId: string) {
-  const tempPassword = `${tempChunk()}-${tempChunk()}`;
+  const tempPassword = temporaryPassword();
   await prisma.user.update({
     where: { id: userId },
     data: { passwordHash: await bcrypt.hash(tempPassword, 10), mustChangePassword: true, tokenVersion: { increment: 1 } },

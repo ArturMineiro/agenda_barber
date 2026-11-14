@@ -1,4 +1,6 @@
-import { BarChart3, Bell, BellRing, CalendarDays, Clock, Home, ListOrdered, Scissors, Settings, Star, Users, UserSquare2 } from "lucide-react";
+import { BarChart3, Bell, BellRing, CalendarDays, CalendarOff, Clock, Home, ListOrdered, Scissors, Settings, Star, Users, UserSquare2 } from "lucide-react";
+import { Navigate, useLocation } from "react-router-dom";
+import { useMe } from "@/features/auth/api";
 import { AppShell, type NavItem } from "@/components/layout/AppShell";
 import { FullPageSpinner } from "@/components/ui/misc";
 import { SupportLink } from "@/lib/support";
@@ -20,15 +22,33 @@ const NAV: NavItem[] = [
   { to: "/painel/configuracoes", label: "Ajustes", icon: Settings },
 ];
 
+/** Barbeiro da equipe: só o que é dele (agenda, fila, lembretes, folgas e números) */
+const BARBER_NAV: NavItem[] = [
+  { to: "/painel", label: "Início", icon: Home, end: true, mobile: true },
+  { to: "/painel/agenda", label: "Agenda", icon: CalendarDays, mobile: true },
+  { to: "/painel/lembretes", label: "Lembretes", icon: BellRing, mobile: true },
+  { to: "/painel/folgas", label: "Folgas", icon: CalendarOff, mobile: true },
+  { to: "/painel/relatorios", label: "Meus números", icon: BarChart3 },
+  { to: "/painel/notificacoes", label: "Notificações", icon: Bell },
+];
+
+/** Telas só do dono: o barbeiro que abrir o endereço direto volta para o início */
+const OWNER_ONLY = ["/painel/equipe", "/painel/servicos", "/painel/clientes", "/painel/avaliacoes", "/painel/configuracoes"];
+
 export function PanelLayout() {
   const { data: shop, isLoading } = useBarbershop();
+  const { data: user } = useMe();
+  const location = useLocation();
   if (isLoading || !shop) return <FullPageSpinner />;
   // horários do painel no fuso da barbearia, mesmo que o celular esteja noutro
   setDisplayTimeZone(shop.timezone);
 
+  const barber = user?.role === "BARBER";
+  if (barber && OWNER_ONLY.some((p) => location.pathname.startsWith(p))) return <Navigate to="/painel" replace />;
+
   // fila é presencial: não há agendamento pelo link para avisar nem para avaliar
   const queueOnly = ["/painel/notificacoes", "/painel/avaliacoes", "/painel/lembretes"];
-  const nav = NAV.filter((n) => !(queueOnly.includes(n.to) && shop.bookingMode === "QUEUE")).map((n) => {
+  const nav = (barber ? BARBER_NAV : NAV).filter((n) => !(queueOnly.includes(n.to) && shop.bookingMode === "QUEUE")).map((n) => {
     // ordem de chegada: a agenda vira a fila
     if (n.to === "/painel/agenda" && shop.bookingMode === "QUEUE") return { ...n, to: "/painel/fila", label: "Fila", icon: ListOrdered };
     if (n.to === "/painel/equipe" && shop.teamType === "SOLO") return { ...n, label: "Horários", icon: Clock };
@@ -38,10 +58,10 @@ export function PanelLayout() {
   return (
     <AppShell
       nav={nav}
-      banner={<StatusBanner shop={shop} />}
+      banner={barber ? null : <StatusBanner shop={shop} />}
       header={
         <div className="rounded-xl bg-zinc-50 px-3 py-2.5 ring-1 ring-zinc-200/70">
-          <p className="text-[11px] font-medium tracking-wide text-zinc-500 uppercase">Barbearia</p>
+          <p className="text-[11px] font-medium tracking-wide text-zinc-500 uppercase">{barber ? "Seu painel na" : "Barbearia"}</p>
           <p className="truncate font-semibold">{shop.name}</p>
         </div>
       }

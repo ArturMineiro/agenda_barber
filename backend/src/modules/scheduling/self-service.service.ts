@@ -113,7 +113,10 @@ export async function rescheduleByClient(token: string, startsAtIso: string, pro
       include: { professional: { select: { name: true } } },
     });
   });
-  void notifyReschedule({ ...appt, startsAt: updated.startsAt, professional: updated.professional }, appt.startsAt);
+  void notifyReschedule(
+    { ...appt, startsAt: updated.startsAt, professionalId: updated.professionalId, professional: updated.professional },
+    appt.startsAt,
+  );
   return updated;
 }
 

@@ -1,29 +1,27 @@
 import * as React from "react";
-import { useNavigate, useSearchParams } from "react-router-dom";
-import { toast } from "sonner";
-import { Ban, CalendarOff, Clock, Pencil, Plus, Trash2, Users } from "lucide-react";
+import { Clock, KeyRound, Pencil, Plus, Trash2, Users } from "lucide-react";
+import { TempPasswordDialog } from "@/components/TempPasswordDialog";
 import { professionalSchema, workingHoursSchema } from "@navalha/shared";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { Card, CardContent } from "@/components/ui/card";
 import { Dialog } from "@/components/ui/dialog";
-import { Field, Input, Select, Textarea } from "@/components/ui/input";
+import { Field, Input, Textarea } from "@/components/ui/input";
 import { Avatar, EmptyState, PageHeader, Skeleton } from "@/components/ui/misc";
 import { Switch } from "@/components/ui/switch";
-import { addDaysToKey, cn, formatDateTime, formatDayShort, formatTime, todayKey, zonedDateTimeToISO } from "@/lib/utils";
+import { cn } from "@/lib/utils";
 import type { Professional, WorkingHour } from "@/types/api";
 import {
   useBarbershop,
-  useCreateTimeOff,
   useDeleteProfessional,
-  useDeleteTimeOff,
+  useProfessionalAccess,
   useProfessionals,
   useSaveHours,
   useSaveProfessional,
   useServices,
-  useTimeOffs,
 } from "../api";
 import { HoursEditor, hoursSummary } from "../components/HoursEditor";
+import { TimeOffSection } from "../components/TimeOffSection";
 import { AvatarUpload } from "@/components/ImageUpload";
 
 export function TeamPage() {
@@ -66,6 +64,11 @@ export function TeamPage() {
                     <div className="flex items-center gap-2">
                       <p className="truncate font-medium">{p.name}</p>
                       {!p.active && <Badge>Inativo</Badge>}
+                      {p.user?.role === "BARBER" && (
+                        <Badge tone="neutral">
+                          <KeyRound className="size-3" /> Com acesso
+                        </Badge>
+                      )}
                     </div>
                     <p className="mt-0.5 text-sm text-zinc-500">{p.serviceIds.length} serviço(s)</p>
                     <p className="mt-0.5 flex items-center gap-1 text-xs text-zinc-500">
@@ -216,6 +219,7 @@ function ProfessionalDialog({ pro, onClose }: { pro: Professional | "new" | null
           </div>
         </Field>
         <Switch checked={form.active} onChange={(active) => setForm({ ...form, active })} label="Ativo" description="Inativos não aparecem para os clientes" />
+        {isEdit && <AccessSection pro={pro} />}
       </div>
     </Dialog>
   );
@@ -256,166 +260,76 @@ function HoursDialog({ pro, onClose }: { pro: Professional | null; onClose: () =
   );
 }
 
-const day = (d: Date) => formatDayShort(d);
-
-/** "sáb, 15/11 · dia inteiro", "15/11 até 20/11", "sáb, 15/11 · 12:00 às 13:00" */
-function describeTimeOff(startsAt: string, endsAt: string) {
-  const s = new Date(startsAt);
-  const e = new Date(endsAt);
-  // dia inteiro termina à meia-noite seguinte (ou 23:59, nos bloqueios antigos)
-  if (formatTime(s) === "00:00" && ["00:00", "23:59"].includes(formatTime(e))) {
-    const last = new Date(e.getTime() - 60_000);
-    return day(s) === day(last) ? `${day(s)} · dia inteiro` : `${day(s)} até ${day(last)}`;
-  }
-  if (day(s) === day(e)) return `${day(s)} · ${formatTime(s)} às ${formatTime(e)}`;
-  return `${formatDateTime(startsAt)} → ${formatDateTime(endsAt)}`;
-}
-
-/** Folgas, férias, compromissos: bloqueiam a agenda do profissional */
-function TimeOffSection({ pros }: { pros: Professional[] }) {
-  const { data: offs } = useTimeOffs();
+/**
+ * Login próprio para o barbeiro da equipe: ele vê só a própria agenda, fila, lembretes e números.
+ * O dono cria com o e-mail dele; a senha temporária vai pelo WhatsApp e é trocada no primeiro acesso.
+ */
+function AccessSection({ pro }: { pro: Professional }) {
   const { data: shop } = useBarbershop();
-  const create = useCreateTimeOff();
-  const remove = useDeleteTimeOff();
-  const navigate = useNavigate();
-  // atalho "Marcar folga" do início do painel: /painel/equipe?folga=1 já abre o formulário
-  const [params] = useSearchParams();
-  const [open, setOpen] = React.useState(() => params.get("folga") === "1");
-  const today = todayKey();
-  const [f, setF] = React.useState({ professionalId: "", date: today, endDate: today, allDay: true, start: "12:00", end: "13:00", reason: "" });
-  const activePros = pros.filter((p) => p.active);
-  const firstProId = activePros[0]?.id ?? pros[0]?.id;
+  const access = useProfessionalAccess(pro.id);
+  const [email, setEmail] = React.useState("");
+  const [result, setResult] = React.useState<{ email: string; tempPassword: string } | null>(null);
+  const first = pro.name.split(" ")[0];
 
-  React.useEffect(() => {
-    if (firstProId && !f.professionalId) setF((x) => ({ ...x, professionalId: firstProId }));
-  }, [firstProId, f.professionalId]);
-
-  const submit = () => {
-    if (f.allDay && f.endDate < f.date) return toast.error("O último dia precisa ser igual ou depois do primeiro");
-    // horário da barbearia (não o do aparelho); dia inteiro vai até a meia-noite seguinte ao último dia
-    const tz = shop?.timezone ?? "America/Sao_Paulo";
-    const startsAt = zonedDateTimeToISO(f.date, f.allDay ? "00:00" : f.start, tz);
-    const endsAt = f.allDay
-      ? zonedDateTimeToISO(addDaysToKey(f.endDate, 1), "00:00", tz)
-      : zonedDateTimeToISO(f.date, f.end, tz);
-    create.mutate(
-      { professionalId: f.professionalId, startsAt, endsAt, reason: f.reason },
-      {
-        onSuccess: (r) => {
-          setOpen(false);
-          if (r.conflicts) {
-            toast.warning(
-              `Folga salva, mas ${r.conflicts} cliente(s) já estavam marcados nesse período e continuam na agenda. Desmarque e avise cada um.`,
-              { duration: 12_000, action: { label: "Ver agenda", onClick: () => navigate(`/painel/agenda?data=${f.date}`) } },
-            );
-          }
-        },
-      },
-    );
-  };
+  if (pro.user?.role === "OWNER") return null;
 
   return (
-    <Card>
-      <CardHeader>
-        <div>
-          <CardTitle>Folgas e bloqueios</CardTitle>
-          <p className="mt-0.5 text-sm text-zinc-500">Folga numa data, feriado, férias ou compromisso. Ninguém agenda nesses horários.</p>
-        </div>
-        <Button size="sm" variant="outline" onClick={() => setOpen(true)}>
-          <Ban /> Marcar folga
-        </Button>
-      </CardHeader>
-      <CardContent>
-        {offs?.length ? (
-          <ul className="divide-y divide-zinc-100">
-            {offs.map((o) => (
-              <li key={o.id} className="flex items-center gap-3 py-2.5">
-                <CalendarOff className="size-4 text-zinc-400" />
-                <div className="min-w-0 flex-1 text-sm">
-                  <p className="font-medium first-letter:uppercase">{describeTimeOff(o.startsAt, o.endsAt)}</p>
-                  <p className="text-zinc-500">
-                    {pros.length > 1 && `${o.professional.name} · `}
-                    {o.reason ?? "Sem motivo"}
-                  </p>
-                </div>
-                <button onClick={() => remove.mutate(o.id)} className="rounded-lg p-2 text-zinc-400 hover:bg-zinc-100 hover:text-red-600" aria-label="Remover">
-                  <Trash2 className="size-4" />
-                </button>
-              </li>
-            ))}
-          </ul>
-        ) : (
-          <p className="text-sm text-zinc-500">Nenhum bloqueio futuro.</p>
-        )}
-      </CardContent>
-
-      <Dialog
-        open={open}
-        onClose={() => setOpen(false)}
-        title="Marcar folga ou bloqueio"
-        footer={
-          <>
-            <Button variant="outline" onClick={() => setOpen(false)} className="flex-1 sm:flex-none">
-              Cancelar
+    <div className="rounded-xl bg-zinc-50 p-4 ring-1 ring-zinc-200">
+      <p className="flex items-center gap-1.5 text-sm font-medium">
+        <KeyRound className="size-4 text-zinc-500" /> Acesso ao painel
+      </p>
+      {pro.user ? (
+        <>
+          <p className="mt-1 text-sm text-zinc-600">
+            Entra com <strong className="text-zinc-900">{pro.user.email}</strong> e vê só a própria agenda, fila e números.
+          </p>
+          <div className="mt-3 flex flex-wrap gap-2">
+            <Button
+              size="sm"
+              variant="outline"
+              loading={access.reset.isPending}
+              onClick={() =>
+                confirm(`Gerar uma senha nova para ${first}? A atual para de funcionar.`) && access.reset.mutate(undefined, { onSuccess: setResult })
+              }
+            >
+              Gerar nova senha
             </Button>
-            <Button onClick={submit} loading={create.isPending} className="flex-1 sm:flex-none">
-              Salvar folga
+            <Button
+              size="sm"
+              variant="ghost"
+              className="text-red-600"
+              loading={access.remove.isPending}
+              onClick={() => confirm(`Remover o acesso de ${first} ao painel?`) && access.remove.mutate()}
+            >
+              Remover acesso
             </Button>
-          </>
-        }
-      >
-        <div className="space-y-4">
-          {activePros.length > 1 && (
-            <Field label="Profissional">
-              <Select value={f.professionalId} onChange={(e) => setF({ ...f, professionalId: e.target.value })}>
-                {activePros.map((p) => (
-                  <option key={p.id} value={p.id}>
-                    {p.name}
-                  </option>
-                ))}
-              </Select>
-            </Field>
-          )}
-          <Switch checked={f.allDay} onChange={(allDay) => setF({ ...f, allDay })} label="Dia inteiro" description="Desligue para bloquear só algumas horas" />
-          {f.allDay ? (
-            <div className="grid grid-cols-2 gap-3">
-              <Field label="De">
-                <Input
-                  type="date"
-                  min={today}
-                  value={f.date}
-                  onChange={(e) => e.target.value && setF({ ...f, date: e.target.value, endDate: f.endDate < e.target.value ? e.target.value : f.endDate })}
-                />
-              </Field>
-              <Field label="Até" hint="Férias: escolha o último dia">
-                <Input type="date" min={f.date} value={f.endDate} onChange={(e) => e.target.value && setF({ ...f, endDate: e.target.value })} />
-              </Field>
-            </div>
-          ) : (
-            <Field label="Data">
-              <Input
-                type="date"
-                min={today}
-                value={f.date}
-                onChange={(e) => e.target.value && setF({ ...f, date: e.target.value, endDate: f.endDate < e.target.value ? e.target.value : f.endDate })}
-              />
-            </Field>
-          )}
-          {!f.allDay && (
-            <div className="grid grid-cols-2 gap-3">
-              <Field label="Das">
-                <Input type="time" value={f.start} onChange={(e) => setF({ ...f, start: e.target.value })} />
-              </Field>
-              <Field label="Até">
-                <Input type="time" value={f.end} onChange={(e) => setF({ ...f, end: e.target.value })} />
-              </Field>
-            </div>
-          )}
-          <Field label="Motivo (opcional)">
-            <Input placeholder="Ex.: Feriado, médico…" value={f.reason} onChange={(e) => setF({ ...f, reason: e.target.value })} />
-          </Field>
-        </div>
-      </Dialog>
-    </Card>
+          </div>
+        </>
+      ) : (
+        <>
+          <p className="mt-1 text-sm text-zinc-600">Dê um login para {first} ver a própria agenda, a fila e os números no celular.</p>
+          <div className="mt-3 flex gap-2">
+            <Input type="email" inputMode="email" placeholder={`E-mail de ${first}`} value={email} onChange={(e) => setEmail(e.target.value)} />
+            <Button
+              type="button"
+              className="shrink-0"
+              disabled={!email.includes("@")}
+              loading={access.create.isPending}
+              onClick={() => access.create.mutate(email, { onSuccess: (r) => (setEmail(""), setResult(r)) })}
+            >
+              Criar acesso
+            </Button>
+          </div>
+        </>
+      )}
+      <TempPasswordDialog
+        password={result?.tempPassword ?? null}
+        onClose={() => setResult(null)}
+        title={`Acesso de ${first}`}
+        name={pro.name}
+        email={result?.email ?? ""}
+        context={shop ? `ao painel da ${shop.name}` : undefined}
+      />
+    </div>
   );
 }
