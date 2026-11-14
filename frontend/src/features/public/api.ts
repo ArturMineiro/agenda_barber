@@ -127,7 +127,7 @@ export interface MyAppointment {
   cancelMinAdvanceMinutes: number;
   barbershop: Pick<
     PublicBarbershop["barbershop"],
-    "name" | "slug" | "phone" | "whatsapp" | "address" | "city" | "logoUrl" | "coverUrl" | "primaryColor" | "secondaryColor" | "pageTheme" | "maxAdvanceDays" | "teamType"
+    "name" | "slug" | "phone" | "whatsapp" | "address" | "city" | "logoUrl" | "coverUrl" | "primaryColor" | "secondaryColor" | "pageTheme" | "maxAdvanceDays" | "teamType" | "timezone"
   >;
 }
 

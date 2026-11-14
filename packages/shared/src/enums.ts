@@ -33,3 +33,27 @@ export type PageTheme = (typeof PAGE_THEMES)[number];
 
 export const QUEUE_STATUS = ["WAITING", "IN_SERVICE", "DONE", "NO_SHOW", "CANCELED"] as const;
 export type QueueStatus = (typeof QUEUE_STATUS)[number];
+
+/** Fusos do Brasil (sem horário de verão desde 2019). O horário de Brasília vale para a maior parte do país. */
+export const TIMEZONE_IDS = [
+  "America/Sao_Paulo",
+  "America/Manaus",
+  "America/Cuiaba",
+  "America/Campo_Grande",
+  "America/Porto_Velho",
+  "America/Boa_Vista",
+  "America/Rio_Branco",
+  "America/Noronha",
+] as const;
+export type TimezoneId = (typeof TIMEZONE_IDS)[number];
+
+export const TIMEZONE_LABELS: Record<TimezoneId, string> = {
+  "America/Sao_Paulo": "Horário de Brasília (SP, RJ, MG, ES, Sul, Nordeste, GO, DF, TO, PA, AP)",
+  "America/Manaus": "Amazonas (1h a menos)",
+  "America/Cuiaba": "Mato Grosso (1h a menos)",
+  "America/Campo_Grande": "Mato Grosso do Sul (1h a menos)",
+  "America/Porto_Velho": "Rondônia (1h a menos)",
+  "America/Boa_Vista": "Roraima (1h a menos)",
+  "America/Rio_Branco": "Acre (2h a menos)",
+  "America/Noronha": "Fernando de Noronha (1h a mais)",
+};

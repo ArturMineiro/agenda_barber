@@ -4,7 +4,7 @@ import { useSearchParams } from "react-router-dom";
 import { Button } from "@/components/ui/button";
 import { DateStrip } from "@/components/DateStrip";
 import { EmptyState, PageHeader, Skeleton, Tabs } from "@/components/ui/misc";
-import { formatLongDate, formatMoney, fromDateKey, toDateKey } from "@/lib/utils";
+import { formatDateKeyLong, formatMoney, todayKey } from "@/lib/utils";
 import { useAppointments, useBarbershop, useProfessionals } from "../api";
 import { AppointmentCard } from "../components/AppointmentCard";
 import { NewAppointmentDialog } from "../components/NewAppointmentDialog";
@@ -14,7 +14,7 @@ export function AgendaPage() {
   const [params] = useSearchParams();
   const [date, setDate] = React.useState(() => {
     const d = params.get("data");
-    return d && /^\d{4}-\d{2}-\d{2}$/.test(d) && d >= toDateKey(new Date()) ? d : toDateKey(new Date());
+    return d && /^\d{4}-\d{2}-\d{2}$/.test(d) && d >= todayKey() ? d : todayKey();
   });
   const [pro, setPro] = React.useState<string>("all");
   const [creating, setCreating] = React.useState(false);
@@ -30,7 +30,7 @@ export function AgendaPage() {
     <div className="space-y-5">
       <PageHeader
         title="Agenda"
-        description={<span className="inline-block first-letter:uppercase">{formatLongDate(fromDateKey(date))}</span>}
+        description={<span className="inline-block first-letter:uppercase">{formatDateKeyLong(date)}</span>}
         actions={
           <Button onClick={() => setCreating(true)} className="hidden sm:inline-flex">
             <Plus /> Novo agendamento

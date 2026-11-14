@@ -10,7 +10,7 @@ import { Dialog } from "@/components/ui/dialog";
 import { Field, Input, Select, Textarea } from "@/components/ui/input";
 import { Avatar, EmptyState, PageHeader, Skeleton } from "@/components/ui/misc";
 import { Switch } from "@/components/ui/switch";
-import { addDays, cn, formatDateTime, formatTime, fromDateKey, toDateKey, zonedDateTimeToISO } from "@/lib/utils";
+import { addDaysToKey, cn, formatDateTime, formatDayShort, formatTime, todayKey, zonedDateTimeToISO } from "@/lib/utils";
 import type { Professional, WorkingHour } from "@/types/api";
 import {
   useBarbershop,
@@ -256,8 +256,7 @@ function HoursDialog({ pro, onClose }: { pro: Professional | null; onClose: () =
   );
 }
 
-const dayFmt = new Intl.DateTimeFormat("pt-BR", { weekday: "short", day: "2-digit", month: "2-digit", timeZone: "America/Sao_Paulo" });
-const day = (d: Date) => dayFmt.format(d).replace(".", "");
+const day = (d: Date) => formatDayShort(d);
 
 /** "sáb, 15/11 · dia inteiro", "15/11 até 20/11", "sáb, 15/11 · 12:00 às 13:00" */
 function describeTimeOff(startsAt: string, endsAt: string) {
@@ -282,7 +281,7 @@ function TimeOffSection({ pros }: { pros: Professional[] }) {
   // atalho "Marcar folga" do início do painel: /painel/equipe?folga=1 já abre o formulário
   const [params] = useSearchParams();
   const [open, setOpen] = React.useState(() => params.get("folga") === "1");
-  const today = toDateKey(new Date());
+  const today = todayKey();
   const [f, setF] = React.useState({ professionalId: "", date: today, endDate: today, allDay: true, start: "12:00", end: "13:00", reason: "" });
   const activePros = pros.filter((p) => p.active);
   const firstProId = activePros[0]?.id ?? pros[0]?.id;
@@ -297,7 +296,7 @@ function TimeOffSection({ pros }: { pros: Professional[] }) {
     const tz = shop?.timezone ?? "America/Sao_Paulo";
     const startsAt = zonedDateTimeToISO(f.date, f.allDay ? "00:00" : f.start, tz);
     const endsAt = f.allDay
-      ? zonedDateTimeToISO(toDateKey(addDays(fromDateKey(f.endDate), 1)), "00:00", tz)
+      ? zonedDateTimeToISO(addDaysToKey(f.endDate, 1), "00:00", tz)
       : zonedDateTimeToISO(f.date, f.end, tz);
     create.mutate(
       { professionalId: f.professionalId, startsAt, endsAt, reason: f.reason },

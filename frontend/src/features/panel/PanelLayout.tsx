@@ -2,7 +2,7 @@ import { Bell, CalendarDays, Clock, Home, ListOrdered, Scissors, Settings, Star,
 import { AppShell, type NavItem } from "@/components/layout/AppShell";
 import { FullPageSpinner } from "@/components/ui/misc";
 import { SupportLink } from "@/lib/support";
-import { formatDateOnly, formatMoney } from "@/lib/utils";
+import { formatDateOnly, formatMoney, setDisplayTimeZone } from "@/lib/utils";
 import type { Barbershop } from "@/types/api";
 import { useBarbershop } from "./api";
 
@@ -21,6 +21,8 @@ const NAV: NavItem[] = [
 export function PanelLayout() {
   const { data: shop, isLoading } = useBarbershop();
   if (isLoading || !shop) return <FullPageSpinner />;
+  // horários do painel no fuso da barbearia, mesmo que o celular esteja noutro
+  setDisplayTimeZone(shop.timezone);
 
   // fila é presencial: não há agendamento pelo link para avisar nem para avaliar
   const queueOnly = ["/painel/notificacoes", "/painel/avaliacoes"];

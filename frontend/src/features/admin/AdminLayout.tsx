@@ -1,5 +1,6 @@
 import { LayoutDashboard, Package, Receipt, Store } from "lucide-react";
 import { AppShell, type NavItem } from "@/components/layout/AppShell";
+import { setDisplayTimeZone } from "@/lib/utils";
 
 const NAV: NavItem[] = [
   { to: "/admin", label: "Visão geral", icon: LayoutDashboard, end: true, mobile: true },
@@ -9,6 +10,8 @@ const NAV: NavItem[] = [
 ];
 
 export function AdminLayout() {
+  // a plataforma (cobranças, cadastros) usa o horário de Brasília
+  setDisplayTimeZone(null);
   return (
     <AppShell
       nav={NAV}

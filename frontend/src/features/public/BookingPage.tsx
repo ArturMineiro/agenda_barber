@@ -22,7 +22,7 @@ import { DateStrip } from "@/components/DateStrip";
 import { ApiError, errorMessage } from "@/lib/api";
 import { brandVars, usePublicTheme } from "@/lib/theme";
 import { saveBooking, upcomingBookings } from "@/lib/my-bookings";
-import { addDays, cn, formatDuration, formatLongDate, formatMoney, formatTime, maskPhone, toDateKey, whatsappLink } from "@/lib/utils";
+import { addDaysToKey, cn, formatDuration, formatLongDate, formatMoney, formatTime, formatWeekdayShort, maskPhone, setDisplayTimeZone, todayKey, whatsappLink } from "@/lib/utils";
 import type { Slot } from "@/types/api";
 import { QueueView } from "./QueueView";
 import { Hero } from "./Hero";
@@ -49,6 +49,7 @@ export function BookingPage() {
 
   if (isLoading) return <FullPageSpinner />;
   if (error || !data) return <Unavailable error={error} />;
+  setDisplayTimeZone(data.barbershop.timezone);
 
   return (
     <div style={brandVars(data.barbershop.primaryColor, data.barbershop.secondaryColor, data.barbershop.pageTheme)} className="min-h-dvh bg-zinc-50">
@@ -67,7 +68,7 @@ function ScheduleBooking({ data, slug }: { data: PublicBarbershop; slug: string 
   const [step, setStep] = React.useState<Step>("service");
   const [serviceId, setServiceId] = React.useState<string>();
   const [professionalId, setProfessionalId] = React.useState<string>(); // undefined = sem preferência
-  const [date, setDate] = React.useState(() => toDateKey(new Date()));
+  const [date, setDate] = React.useState(() => todayKey());
   const [slot, setSlot] = React.useState<Slot>();
   const [result, setResult] = React.useState<BookingResult>();
   const [viewing, setViewing] = React.useState<CatalogService | null>(null);
@@ -275,8 +276,8 @@ function TimeStep(props: {
     professionalId: props.professionalId,
     date: props.date,
   });
-  const today = toDateKey(new Date());
-  const max = toDateKey(addDays(new Date(), props.maxDays));
+  const today = todayKey();
+  const max = addDaysToKey(today, props.maxDays);
 
   const periods = React.useMemo(() => {
     const slots = data?.slots ?? [];
@@ -539,7 +540,7 @@ function MyUpcoming({ slug }: { slug: string }) {
             className="flex items-center gap-3 rounded-2xl bg-brand-2 p-4 text-brand-2-foreground shadow-sm active:scale-[0.99]"
           >
             <div className="flex w-14 shrink-0 flex-col items-center rounded-xl bg-white/10 py-1.5">
-              <span className="text-[10px] uppercase opacity-70">{new Date(data!.startsAt).toLocaleDateString("pt-BR", { weekday: "short", timeZone: "America/Sao_Paulo" }).replace(".", "")}</span>
+              <span className="text-[10px] uppercase opacity-70">{formatWeekdayShort(data!.startsAt)}</span>
               <span className="text-lg font-semibold tabular-nums">{formatTime(data!.startsAt)}</span>
             </div>
             <div className="min-w-0 flex-1">

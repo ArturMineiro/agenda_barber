@@ -57,30 +57,77 @@ export function fromDateKey(key: string) {
   return new Date(y!, m! - 1, d!);
 }
 
+/** "2026-11-14" + 3 → "2026-11-17" */
+export const addDaysToKey = (key: string, n: number) => toDateKey(addDays(fromDateKey(key), n));
+
 export function addDays(d: Date, n: number) {
   const r = new Date(d);
   r.setDate(r.getDate() + n);
   return r;
 }
 
-const timeFmt = new Intl.DateTimeFormat("pt-BR", { hour: "2-digit", minute: "2-digit", timeZone: "America/Sao_Paulo" });
-export const formatTime = (iso: string | Date) => timeFmt.format(new Date(iso));
+// ---------- Fuso horário ----------
+//
+// Datas e horas aparecem sempre no fuso DA BARBEARIA (não no do aparelho): o painel e as páginas
+// públicas chamam setDisplayTimeZone(barbearia.timezone) antes de desenhar o conteúdo.
+
+export const DEFAULT_TIMEZONE = "America/Sao_Paulo";
+let displayTz = DEFAULT_TIMEZONE;
+
+export function setDisplayTimeZone(tz?: string | null) {
+  displayTz = tz || DEFAULT_TIMEZONE;
+}
+
+const fmtCache = new Map<string, Intl.DateTimeFormat>();
+/** Formatador no fuso atual (criar Intl.DateTimeFormat é caro: guarda um por fuso) */
+function zoned(name: string, opts: Intl.DateTimeFormatOptions, timeZone = displayTz) {
+  const key = `${name}|${timeZone}`;
+  let f = fmtCache.get(key);
+  if (!f) {
+    f = new Intl.DateTimeFormat("pt-BR", { ...opts, timeZone });
+    fmtCache.set(key, f);
+  }
+  return f;
+}
+
+/** Instante → "14:30" */
+export const formatTime = (iso: string | Date) => zoned("time", { hour: "2-digit", minute: "2-digit" }).format(new Date(iso));
+
+/** Instante → "sábado, 15 de novembro" */
+export const formatLongDate = (d: string | Date) =>
+  zoned("long", { weekday: "long", day: "numeric", month: "long" }).format(new Date(d));
+
+/** Instante → "15/11, 14:30" */
+export const formatDateTime = (iso: string) =>
+  zoned("datetime", { day: "2-digit", month: "2-digit", hour: "2-digit", minute: "2-digit" }).format(new Date(iso));
+
+/** Instante → "sáb" */
+export const formatWeekdayShort = (iso: string | Date) => zoned("weekday", { weekday: "short" }).format(new Date(iso)).replace(".", "");
+
+/** Instante → "sáb, 15/11" */
+export const formatDayShort = (iso: string | Date) =>
+  zoned("dayshort", { weekday: "short", day: "2-digit", month: "2-digit" }).format(new Date(iso)).replace(".", "");
+
+/** Instante → "YYYY-MM-DD" do dia no fuso da barbearia */
+export function dateKeyInZone(d: string | Date = new Date()) {
+  const parts = zoned("key", { year: "numeric", month: "2-digit", day: "2-digit" }).formatToParts(new Date(d));
+  const get = (t: string) => parts.find((p) => p.type === t)!.value;
+  return `${get("year")}-${get("month")}-${get("day")}`;
+}
+
+/** Hoje, no fuso da barbearia */
+export const todayKey = () => dateKeyInZone(new Date());
+
+/**
+ * Data de calendário "YYYY-MM-DD" → "sábado, 15 de novembro".
+ * Não passa por instante: assim não troca de dia quando o aparelho está noutro fuso.
+ */
+export const formatDateKeyLong = (key: string) =>
+  zoned("keylong", { weekday: "long", day: "numeric", month: "long" }, "UTC").format(new Date(`${key}T12:00:00Z`));
 
 const dateFmt = new Intl.DateTimeFormat("pt-BR", { day: "2-digit", month: "2-digit", year: "numeric", timeZone: "UTC" });
 /** Para colunas só-data (ex.: vencimento) que chegam como meia-noite UTC */
 export const formatDateOnly = (iso: string) => dateFmt.format(new Date(iso));
-
-const longFmt = new Intl.DateTimeFormat("pt-BR", { weekday: "long", day: "numeric", month: "long", timeZone: "America/Sao_Paulo" });
-export const formatLongDate = (d: string | Date) => longFmt.format(new Date(d));
-
-const dateTimeFmt = new Intl.DateTimeFormat("pt-BR", {
-  day: "2-digit",
-  month: "2-digit",
-  hour: "2-digit",
-  minute: "2-digit",
-  timeZone: "America/Sao_Paulo",
-});
-export const formatDateTime = (iso: string) => dateTimeFmt.format(new Date(iso));
 
 export const publicUrl = (slug: string) => `${window.location.origin}/${slug}`;
 

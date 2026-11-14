@@ -1,7 +1,7 @@
 import * as React from "react";
 import { ChevronLeft, ChevronRight } from "lucide-react";
 import { WEEKDAYS_SHORT } from "@navalha/shared";
-import { addDays, cn, fromDateKey, toDateKey } from "@/lib/utils";
+import { addDays, cn, fromDateKey, toDateKey, todayKey } from "@/lib/utils";
 
 interface DateStripProps {
   value: string;
@@ -23,7 +23,7 @@ export function DateStrip({ value, onChange, min, max, days = 14, activeClassNam
     return toDateKey(fromDateKey(value) < base ? fromDateKey(value) : base);
   });
   const ref = React.useRef<HTMLDivElement>(null);
-  const today = toDateKey(new Date());
+  const today = todayKey();
 
   // se a data selecionada sair da janela visível, reposiciona
   React.useEffect(() => {

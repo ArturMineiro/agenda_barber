@@ -2,7 +2,7 @@ import { useForm, useWatch } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { Link } from "react-router-dom";
 import { Bell, CalendarDays, Check, ChevronRight, Clock, Instagram, ListOrdered, MapPin, Moon, Sun } from "lucide-react";
-import { barbershopSettingsSchema, SLOT_INTERVALS, type BarbershopSettingsInput } from "@navalha/shared";
+import { barbershopSettingsSchema, SLOT_INTERVALS, TIMEZONE_IDS, TIMEZONE_LABELS, type BarbershopSettingsInput, type TimezoneId } from "@navalha/shared";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Field, Input, Select, Textarea } from "@/components/ui/input";
@@ -64,6 +64,7 @@ function toForm(s: Barbershop): BarbershopSettingsInput {
     secondaryColor: s.secondaryColor,
     pageTheme: s.pageTheme,
     bookingMode: s.bookingMode,
+    timezone: s.timezone as TimezoneId,
     slotIntervalMinutes: s.slotIntervalMinutes,
     minAdvanceMinutes: s.minAdvanceMinutes,
     maxAdvanceDays: s.maxAdvanceDays,
@@ -254,6 +255,21 @@ export function SettingsPage() {
                   );
                 })}
               </div>
+
+              <Field
+                label="Fuso horário"
+                error={errors.timezone?.message}
+                hint="Os horários da agenda e da página seguem este fuso, mesmo que o cliente esteja em outro estado."
+                className="sm:max-w-md"
+              >
+                <Select {...form.register("timezone")}>
+                  {TIMEZONE_IDS.map((tz) => (
+                    <option key={tz} value={tz}>
+                      {TIMEZONE_LABELS[tz]}
+                    </option>
+                  ))}
+                </Select>
+              </Field>
 
               <Link
                 to="/painel/equipe"

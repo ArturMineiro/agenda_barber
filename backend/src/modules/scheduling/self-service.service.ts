@@ -151,6 +151,7 @@ export function toPublicAppointment(appt: Awaited<ReturnType<typeof findByToken>
       pageTheme: b.pageTheme,
       maxAdvanceDays: b.maxAdvanceDays,
       teamType: b.teamType,
+      timezone: b.timezone,
     },
   };
 }

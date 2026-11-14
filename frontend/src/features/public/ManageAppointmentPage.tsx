@@ -12,7 +12,7 @@ import { StarInput, Stars } from "@/components/Stars";
 import { ApiError, errorMessage } from "@/lib/api";
 import { updateSavedBooking } from "@/lib/my-bookings";
 import { brandVars, readableOn, usePublicTheme } from "@/lib/theme";
-import { addDays, cn, formatDateTime, formatLongDate, formatMoney, formatTime, fromDateKey, toDateKey, whatsappLink } from "@/lib/utils";
+import { addDaysToKey, cn, dateKeyInZone, formatDateKeyLong, formatDateTime, formatLongDate, formatMoney, formatTime, setDisplayTimeZone, todayKey, whatsappLink } from "@/lib/utils";
 import type { Slot } from "@/types/api";
 import { useCancelMine, useMyAppointment, useRescheduleAvailability, useRescheduleMine, useReviewMine, type MyAppointment } from "./api";
 
@@ -34,6 +34,7 @@ export function ManageAppointmentPage() {
   }
 
   const shop = appt.barbershop;
+  setDisplayTimeZone(shop.timezone);
   return (
     <div style={brandVars(shop.primaryColor, shop.secondaryColor, shop.pageTheme)} className="min-h-dvh bg-zinc-50">
       <header className="bg-brand-2 text-brand-2-foreground">
@@ -263,13 +264,13 @@ function Summary({ appt, muted }: { appt: MyAppointment; muted?: boolean }) {
 }
 
 function Reschedule({ appt, token, onDone }: { appt: MyAppointment; token: string; onDone: () => void }) {
-  const today = toDateKey(new Date());
-  const [date, setDate] = React.useState(() => (toDateKey(new Date(appt.startsAt)) < today ? today : toDateKey(new Date(appt.startsAt))));
+  const today = todayKey();
+  const [date, setDate] = React.useState(() => (dateKeyInZone(appt.startsAt) < today ? today : dateKeyInZone(appt.startsAt)));
   const [proId, setProId] = React.useState<string | undefined>(appt.professional.id);
   const [slot, setSlot] = React.useState<Slot>();
   const { data, isFetching } = useRescheduleAvailability(token, { date, professionalId: proId }, true);
   const reschedule = useRescheduleMine(token);
-  const max = toDateKey(addDays(new Date(), appt.barbershop.maxAdvanceDays));
+  const max = addDaysToKey(today, appt.barbershop.maxAdvanceDays);
   const current = new Date(appt.startsAt).getTime();
   // esconde só o horário atual com o mesmo barbeiro (com "qualquer um", vale se outro estiver livre)
   const isSameAsNow = (s: Slot) =>
@@ -360,7 +361,7 @@ function Reschedule({ appt, token, onDone }: { appt: MyAppointment; token: strin
         </div>
       ) : (
         <p className="rounded-2xl bg-white p-6 text-center text-sm text-zinc-500 ring-1 ring-zinc-200">
-          Sem horários em <span className="first-letter:uppercase">{formatLongDate(fromDateKey(date))}</span>. Tente outro dia.
+          Sem horários em <span className="first-letter:uppercase">{formatDateKeyLong(date)}</span>. Tente outro dia.
         </p>
       )}
 
