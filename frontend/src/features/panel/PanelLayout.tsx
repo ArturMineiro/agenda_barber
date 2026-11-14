@@ -1,4 +1,4 @@
-import { Bell, CalendarDays, Clock, Home, ListOrdered, Scissors, Settings, Star, Users, UserSquare2 } from "lucide-react";
+import { Bell, BellRing, CalendarDays, Clock, Home, ListOrdered, Scissors, Settings, Star, Users, UserSquare2 } from "lucide-react";
 import { AppShell, type NavItem } from "@/components/layout/AppShell";
 import { FullPageSpinner } from "@/components/ui/misc";
 import { SupportLink } from "@/lib/support";
@@ -12,6 +12,7 @@ const NAV: NavItem[] = [
   { to: "/painel/equipe", label: "Equipe", icon: Users, mobile: true },
   { to: "/painel/servicos", label: "Serviços", icon: Scissors, mobile: true },
   // no celular, os itens abaixo ficam em "Mais"
+  { to: "/painel/lembretes", label: "Lembretes", icon: BellRing },
   { to: "/painel/clientes", label: "Clientes", icon: UserSquare2 },
   { to: "/painel/avaliacoes", label: "Avaliações", icon: Star },
   { to: "/painel/notificacoes", label: "Notificações", icon: Bell },
@@ -25,7 +26,7 @@ export function PanelLayout() {
   setDisplayTimeZone(shop.timezone);
 
   // fila é presencial: não há agendamento pelo link para avisar nem para avaliar
-  const queueOnly = ["/painel/notificacoes", "/painel/avaliacoes"];
+  const queueOnly = ["/painel/notificacoes", "/painel/avaliacoes", "/painel/lembretes"];
   const nav = NAV.filter((n) => !(queueOnly.includes(n.to) && shop.bookingMode === "QUEUE")).map((n) => {
     // ordem de chegada: a agenda vira a fila
     if (n.to === "/painel/agenda" && shop.bookingMode === "QUEUE") return { ...n, to: "/painel/fila", label: "Fila", icon: ListOrdered };

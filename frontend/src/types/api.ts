@@ -80,6 +80,8 @@ export interface Barbershop {
   minAdvanceMinutes: number;
   maxAdvanceDays: number;
   cancelMinAdvanceMinutes: number;
+  /** hora do aviso "amanhã você tem N clientes" (null = desligado) */
+  reminderDigestHour: number | null;
   approvedAt: string | null;
   createdAt: string;
   subscription: Subscription | null;
@@ -136,6 +138,8 @@ export interface Appointment {
   canceledBy: "client" | "barbershop" | null;
   cancelReason: string | null;
   rescheduleCount: number;
+  /** quando o dono mandou o lembrete pelo WhatsApp */
+  reminderSentAt: string | null;
   service: { name: string; durationMinutes?: number };
   professional: { name: string };
 }

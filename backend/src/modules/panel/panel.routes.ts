@@ -4,6 +4,7 @@ import { z } from "zod";
 import {
   agendaQuerySchema,
   cancelAppointmentSchema,
+  dateStringSchema,
   availabilityQuerySchema,
   barbershopSettingsSchema,
   manualAppointmentSchema,
@@ -23,6 +24,7 @@ import { isSlugAvailable } from "../auth/auth.service";
 import { BLOCKING_STATUSES, getAvailability } from "../scheduling/availability.service";
 import { assertSlotFree, createAppointment, inSlotTransaction } from "../scheduling/booking.service";
 import { deleteImage } from "../uploads/uploads.service";
+import { listReminders, markReminderSent } from "../reminders/reminders.service";
 
 export const panelRoutes = Router();
 panelRoutes.use(requireAuth, requireRole("OWNER"), loadOwnerBarbershop);
@@ -381,6 +383,19 @@ panelRoutes.patch("/appointments/:id/status", async (req, res) => {
     });
     await tx.appointment.update({ where: { id: appt.id }, data });
   });
+  res.json({ ok: true });
+});
+
+// ---------- Lembretes (dia seguinte) ----------
+
+panelRoutes.get("/reminders", async (req, res) => {
+  const { date } = z.object({ date: dateStringSchema.optional() }).parse(req.query);
+  res.json(await listReminders(shop(req), date));
+});
+
+/** O dono abriu o WhatsApp com o lembrete: marca como lembrado */
+panelRoutes.post("/appointments/:id/reminder", async (req, res) => {
+  await markReminderSent(shop(req).id, String(req.params.id));
   res.json({ ok: true });
 });
 

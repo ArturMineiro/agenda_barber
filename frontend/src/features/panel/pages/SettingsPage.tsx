@@ -69,6 +69,7 @@ function toForm(s: Barbershop): BarbershopSettingsInput {
     minAdvanceMinutes: s.minAdvanceMinutes,
     maxAdvanceDays: s.maxAdvanceDays,
     cancelMinAdvanceMinutes: s.cancelMinAdvanceMinutes,
+    reminderDigestHour: s.reminderDigestHour,
   };
 }
 
@@ -322,6 +323,20 @@ export function SettingsPage() {
                   {[7, 14, 30, 60, 90].map((d) => (
                     <option key={d} value={d}>
                       {d} dias
+                    </option>
+                  ))}
+                </Select>
+              </Field>
+              <Field
+                label="Aviso para lembrar os clientes"
+                hint="Chega no seu celular com os clientes do dia seguinte. Um toque manda o lembrete no WhatsApp."
+                className="sm:col-span-3 sm:max-w-xs"
+              >
+                <Select {...form.register("reminderDigestHour", { setValueAs: (v) => (v === "" || v === null ? null : Number(v)) })}>
+                  <option value="">Desligado</option>
+                  {[17, 18, 19, 20, 21].map((h) => (
+                    <option key={h} value={h}>
+                      Às {h}h
                     </option>
                   ))}
                 </Select>

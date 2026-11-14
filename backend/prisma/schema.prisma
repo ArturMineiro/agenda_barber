@@ -136,6 +136,10 @@ model Barbershop {
   maxAdvanceDays      Int @default(30)
   /// até quantos minutos antes o cliente pode cancelar/remarcar sozinho
   cancelMinAdvanceMinutes Int @default(120)
+  /// hora (no fuso da barbearia) do aviso "amanhã você tem N clientes"; null = desligado
+  reminderDigestHour Int? @default(19)
+  /// dia local ("2026-11-14") em que o aviso já foi enviado (não repete no mesmo dia)
+  reminderDigestOn   String?
 
   statusReason String?
   approvedAt   DateTime?
@@ -317,6 +321,8 @@ model Appointment {
   cancelReason   String?
   /// quantas vezes o cliente remarcou
   rescheduleCount Int              @default(0)
+  /// quando o dono mandou o lembrete pelo WhatsApp
+  reminderSentAt DateTime?
   createdAt      DateTime          @default(now())
   updatedAt      DateTime          @updatedAt
 

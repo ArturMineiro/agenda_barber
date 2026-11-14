@@ -250,6 +250,45 @@ export const useSetQueueStatus = () =>
 export const useToggleQueueOpen = () =>
   useQueueAction(({ id, open }: { id: string; open: boolean }) => api.patch(`/panel/queue/professionals/${id}/open`, { open }));
 
+// ---------- Lembretes (dia seguinte) ----------
+
+export interface ReminderItem {
+  id: string;
+  clientName: string;
+  clientPhone: string;
+  startsAt: string;
+  accessToken: string;
+  reminderSentAt: string | null;
+  service: { name: string };
+  professional: { name: string };
+}
+
+const remindersKey = (date?: string) => [...panelKeys.all, "reminders", date ?? "amanha"] as const;
+
+export const useReminders = (date?: string) =>
+  useQuery({
+    queryKey: remindersKey(date),
+    queryFn: () => api.get<{ date: string; appointments: ReminderItem[] }>(`/panel/reminders${qs({ date })}`),
+  });
+
+/** Marca como lembrado na hora (otimista): o WhatsApp já abriu */
+export function useMarkReminder() {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: (id: string) => api.post(`/panel/appointments/${id}/reminder`),
+    onMutate: (id) => {
+      const now = new Date().toISOString();
+      qc.setQueriesData<{ date: string; appointments: ReminderItem[] }>({ queryKey: [...panelKeys.all, "reminders"] }, (d) =>
+        d ? { ...d, appointments: d.appointments.map((a) => (a.id === id ? { ...a, reminderSentAt: now } : a)) } : d,
+      );
+    },
+    onSettled: () => {
+      qc.invalidateQueries({ queryKey: [...panelKeys.all, "reminders"] });
+      qc.invalidateQueries({ queryKey: [...panelKeys.all, "appointments"] });
+    },
+  });
+}
+
 // ---------- Avaliações ----------
 
 export interface PanelReview {

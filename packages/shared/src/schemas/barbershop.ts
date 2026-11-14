@@ -42,5 +42,7 @@ export const barbershopSettingsSchema = z.object({
   maxAdvanceDays: z.number().int().min(1).max(180),
   /** Até quantos minutos antes o cliente pode cancelar/remarcar pelo link (0 = até a hora) */
   cancelMinAdvanceMinutes: z.number().int().min(0).max(60 * 72),
+  /** hora do aviso "amanhã você tem N clientes" (null = desligado) */
+  reminderDigestHour: z.number().int().min(0).max(23).nullable().default(19),
 });
 export type BarbershopSettingsInput = z.input<typeof barbershopSettingsSchema>;

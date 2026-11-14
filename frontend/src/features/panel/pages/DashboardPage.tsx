@@ -5,7 +5,7 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { useMe } from "@/features/auth/api";
 import { Avatar } from "@/components/ui/misc";
 import { cn, formatDuration, formatMoney } from "@/lib/utils";
-import { useBarbershop, useDashboard, useProfessionals, useQueue, useServices } from "../api";
+import { useBarbershop, useDashboard, useProfessionals, useQueue, useReminders, useServices } from "../api";
 import { AppointmentCard } from "../components/AppointmentCard";
 import { ShareLinkCard } from "../components/ShareLinkCard";
 import { hoursSummary, weekSchedule } from "../components/HoursEditor";
@@ -52,6 +52,8 @@ export function DashboardPage() {
         )}
       </div>
 
+      {!queueMode && shop.status === "ACTIVE" && <TomorrowReminders />}
+
       {!queueMode && <NotificationsPrompt />}
 
       {!queueMode && <WorkScheduleCard />}
@@ -85,6 +87,32 @@ export function DashboardPage() {
       </section>
       )}
     </div>
+  );
+}
+
+/** Clientes de amanhã: atalho para mandar os lembretes (some quando todos foram lembrados) */
+function TomorrowReminders() {
+  const { data } = useReminders();
+  const list = data?.appointments ?? [];
+  const pending = list.filter((a) => !a.reminderSentAt).length;
+  if (!pending) return null;
+  return (
+    <Link to="/painel/lembretes" className="flex items-center gap-3 rounded-2xl border border-emerald-200 bg-emerald-50 p-4 hover:bg-emerald-100/60">
+      <span className="rounded-xl bg-emerald-500 p-2.5 text-white">
+        <BellRing className="size-5" />
+      </span>
+      <div className="min-w-0 flex-1">
+        <p className="font-semibold text-emerald-950">
+          Amanhã: {list.length} cliente{list.length > 1 ? "s" : ""}
+        </p>
+        <p className="text-sm text-emerald-800/80">
+          {pending === list.length ? "Mande o lembrete no WhatsApp e evite faltas" : `${pending} ainda sem lembrete`}
+        </p>
+      </div>
+      <span className="inline-flex items-center gap-1 text-sm font-semibold text-emerald-800">
+        Lembrar <ArrowRight className="size-4" />
+      </span>
+    </Link>
   );
 }
 

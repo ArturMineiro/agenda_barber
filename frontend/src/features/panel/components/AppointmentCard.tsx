@@ -9,7 +9,7 @@ import { Switch } from "@/components/ui/switch";
 import { messages, sendWhatsApp } from "@/lib/messages";
 import { cn, formatLongDate, formatMoney, formatPhone, formatTime, whatsappLink } from "@/lib/utils";
 import type { Appointment } from "@/types/api";
-import { useBarbershop, useCancelAppointment, useUpdateAppointmentStatus } from "../api";
+import { useBarbershop, useCancelAppointment, useMarkReminder, useUpdateAppointmentStatus } from "../api";
 
 export const STATUS_META: Record<AppointmentStatus, { label: string; tone: "info" | "danger" | "success" | "warning" }> = {
   CONFIRMED: { label: "Confirmado", tone: "info" },
@@ -22,6 +22,7 @@ export function AppointmentCard({ appt, showProfessional }: { appt: Appointment;
   const [menu, setMenu] = React.useState(false);
   const [canceling, setCanceling] = React.useState(false);
   const update = useUpdateAppointmentStatus();
+  const markReminder = useMarkReminder();
   const { data: shop } = useBarbershop();
   const meta = STATUS_META[appt.status];
   const inactive = appt.status === "CANCELED" || appt.status === "NO_SHOW";
@@ -79,7 +80,10 @@ export function AppointmentCard({ appt, showProfessional }: { appt: Appointment;
                       <MenuItem icon={<CalendarCheck />} onClick={act(() => sendWhatsApp(appt.clientPhone, messages.confirm(ctx)))}>
                         Confirmar horário
                       </MenuItem>
-                      <MenuItem icon={<Bell />} onClick={act(() => sendWhatsApp(appt.clientPhone, messages.reminder(ctx)))}>
+                      <MenuItem icon={<Bell />} onClick={act(() => {
+                          sendWhatsApp(appt.clientPhone, messages.reminder(ctx));
+                          markReminder.mutate(appt.id);
+                        })}>
                         Enviar lembrete
                       </MenuItem>
                       <MenuItem icon={<Timer />} onClick={act(() => sendWhatsApp(appt.clientPhone, messages.delay(ctx, 15)))}>
@@ -126,6 +130,11 @@ export function AppointmentCard({ appt, showProfessional }: { appt: Appointment;
           <Badge tone={meta.tone}>
             {appt.status === "CANCELED" && appt.canceledBy === "client" ? "Cancelado pelo cliente" : meta.label}
           </Badge>
+          {appt.reminderSentAt && upcoming && (
+            <Badge tone="success">
+              <Bell className="size-3" /> Lembrado
+            </Badge>
+          )}
           {appt.rescheduleCount > 0 && appt.status === "CONFIRMED" && (
             <Badge tone="neutral">
               <Clock className="size-3" /> Remarcado
