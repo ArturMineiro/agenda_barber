@@ -125,6 +125,10 @@ export const todayKey = () => dateKeyInZone(new Date());
 export const formatDateKeyLong = (key: string) =>
   zoned("keylong", { weekday: "long", day: "numeric", month: "long" }, "UTC").format(new Date(`${key}T12:00:00Z`));
 
+/** Data de calendário "YYYY-MM-DD" → "sáb, 15/11" */
+export const formatDateKeyShort = (key: string) =>
+  zoned("keyshort", { weekday: "short", day: "2-digit", month: "2-digit" }, "UTC").format(new Date(`${key}T12:00:00Z`)).replace(".", "");
+
 const dateFmt = new Intl.DateTimeFormat("pt-BR", { day: "2-digit", month: "2-digit", year: "numeric", timeZone: "UTC" });
 /** Para colunas só-data (ex.: vencimento) que chegam como meia-noite UTC */
 export const formatDateOnly = (iso: string) => dateFmt.format(new Date(iso));

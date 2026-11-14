@@ -64,4 +64,6 @@ export type TimeOffInput = z.input<typeof timeOffSchema>;
 export const agendaQuerySchema = z.object({
   date: dateStringSchema,
   professionalId: idSchema.optional(),
+  /** quantos dias a partir de `date` (1 = o dia; 7 = a semana) */
+  days: z.coerce.number().int().min(1).max(7).default(1),
 });

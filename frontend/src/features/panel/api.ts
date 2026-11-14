@@ -21,7 +21,7 @@ export const panelKeys = {
   dashboard: () => [...panelKeys.all, "dashboard"] as const,
   services: () => [...panelKeys.all, "services"] as const,
   professionals: () => [...panelKeys.all, "professionals"] as const,
-  appointments: (date: string, professionalId?: string) => [...panelKeys.all, "appointments", date, professionalId ?? "all"] as const,
+  appointments: (date: string, professionalId?: string, days = 1) => [...panelKeys.all, "appointments", date, professionalId ?? "all", days] as const,
   availability: (p: object) => [...panelKeys.all, "availability", p] as const,
   timeOffs: () => [...panelKeys.all, "time-offs"] as const,
   clients: (q: string) => [...panelKeys.all, "clients", q] as const,
@@ -169,10 +169,11 @@ export function useDeleteTimeOff() {
 
 // ---------- Agenda ----------
 
-export const useAppointments = (date: string, professionalId?: string) =>
+/** days: 1 = o dia; 7 = a semana a partir de `date` */
+export const useAppointments = (date: string, professionalId?: string, days = 1) =>
   useQuery({
-    queryKey: panelKeys.appointments(date, professionalId),
-    queryFn: () => api.get<Appointment[]>(`/panel/appointments${qs({ date, professionalId })}`),
+    queryKey: panelKeys.appointments(date, professionalId, days),
+    queryFn: () => api.get<Appointment[]>(`/panel/appointments${qs({ date, professionalId, days })}`),
     refetchInterval: 60_000, // novos agendamentos pelo link aparecem sozinhos
   });
 

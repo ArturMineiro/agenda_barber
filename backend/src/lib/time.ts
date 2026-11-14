@@ -1,11 +1,12 @@
 import { DateTime } from "luxon";
+import { badRequest } from "./errors";
 
 export const DEFAULT_TZ = "America/Sao_Paulo";
 
 /** Início do dia (no fuso informado) para uma data "YYYY-MM-DD" */
 export function startOfDayInZone(date: string, zone: string) {
   const dt = DateTime.fromISO(date, { zone }).startOf("day");
-  if (!dt.isValid) throw new Error("Data inválida");
+  if (!dt.isValid) throw badRequest("Data inválida");
   return dt;
 }
 

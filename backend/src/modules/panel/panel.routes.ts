@@ -326,13 +326,14 @@ panelRoutes.delete("/time-offs/:id", async (req, res) => {
 // ---------- Agenda ----------
 
 panelRoutes.get("/appointments", async (req, res) => {
-  const { date, professionalId } = agendaQuerySchema.parse(req.query);
+  const { date, professionalId, days } = agendaQuerySchema.parse(req.query);
   const day = startOfDayInZone(date, shop(req).timezone);
+  const last = day.plus({ days: days - 1 }).endOf("day");
   res.json(
     await prisma.appointment.findMany({
       where: {
         barbershopId: shop(req).id,
-        startsAt: { gte: day.toJSDate(), lte: day.endOf("day").toJSDate() },
+        startsAt: { gte: day.toJSDate(), lte: last.toJSDate() },
         ...(professionalId ? { professionalId } : {}),
       },
       orderBy: { startsAt: "asc" },
