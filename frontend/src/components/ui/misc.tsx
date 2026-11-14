@@ -54,7 +54,7 @@ export function PageHeader({ title, description, actions }: PageHeaderProps) {
   );
 }
 
-export function StatCard({ label, value, hint, icon }: { label: string; value: React.ReactNode; hint?: string; icon?: React.ReactNode }) {
+export function StatCard({ label, value, hint, icon }: { label: string; value: React.ReactNode; hint?: React.ReactNode; icon?: React.ReactNode }) {
   return (
     <div className="rounded-2xl border border-zinc-200/80 bg-white p-4 shadow-xs">
       <div className="flex items-center justify-between text-sm text-zinc-500">

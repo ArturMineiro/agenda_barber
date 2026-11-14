@@ -25,6 +25,7 @@ import { BLOCKING_STATUSES, getAvailability } from "../scheduling/availability.s
 import { assertSlotFree, createAppointment, inSlotTransaction } from "../scheduling/booking.service";
 import { deleteImage } from "../uploads/uploads.service";
 import { listReminders, markReminderSent } from "../reminders/reminders.service";
+import { buildReport } from "../reports/reports.service";
 
 export const panelRoutes = Router();
 panelRoutes.use(requireAuth, requireRole("OWNER"), loadOwnerBarbershop);
@@ -384,6 +385,13 @@ panelRoutes.patch("/appointments/:id/status", async (req, res) => {
     await tx.appointment.update({ where: { id: appt.id }, data });
   });
   res.json({ ok: true });
+});
+
+// ---------- Relatórios ----------
+
+panelRoutes.get("/reports", async (req, res) => {
+  const { from, to } = z.object({ from: dateStringSchema, to: dateStringSchema }).parse(req.query);
+  res.json(await buildReport(shop(req), from, to));
 });
 
 // ---------- Lembretes (dia seguinte) ----------

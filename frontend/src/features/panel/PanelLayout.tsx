@@ -1,4 +1,4 @@
-import { Bell, BellRing, CalendarDays, Clock, Home, ListOrdered, Scissors, Settings, Star, Users, UserSquare2 } from "lucide-react";
+import { BarChart3, Bell, BellRing, CalendarDays, Clock, Home, ListOrdered, Scissors, Settings, Star, Users, UserSquare2 } from "lucide-react";
 import { AppShell, type NavItem } from "@/components/layout/AppShell";
 import { FullPageSpinner } from "@/components/ui/misc";
 import { SupportLink } from "@/lib/support";
@@ -14,6 +14,7 @@ const NAV: NavItem[] = [
   // no celular, os itens abaixo ficam em "Mais"
   { to: "/painel/lembretes", label: "Lembretes", icon: BellRing },
   { to: "/painel/clientes", label: "Clientes", icon: UserSquare2 },
+  { to: "/painel/relatorios", label: "Relatórios", icon: BarChart3 },
   { to: "/painel/avaliacoes", label: "Avaliações", icon: Star },
   { to: "/painel/notificacoes", label: "Notificações", icon: Bell },
   { to: "/painel/configuracoes", label: "Ajustes", icon: Settings },

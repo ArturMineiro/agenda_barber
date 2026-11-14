@@ -32,6 +32,7 @@ export const router = createBrowserRouter([
           { path: "fila", lazy: page(() => import("@/features/panel/pages/QueuePage"), "QueuePage") },
           { path: "servicos", lazy: page(() => import("@/features/panel/pages/ServicesPage"), "ServicesPage") },
           { path: "equipe", lazy: page(() => import("@/features/panel/pages/TeamPage"), "TeamPage") },
+          { path: "relatorios", lazy: page(() => import("@/features/panel/pages/ReportsPage"), "ReportsPage") },
           { path: "lembretes", lazy: page(() => import("@/features/panel/pages/RemindersPage"), "RemindersPage") },
           { path: "avaliacoes", lazy: page(() => import("@/features/panel/pages/ReviewsPage"), "ReviewsPage") },
           { path: "clientes", lazy: page(() => import("@/features/panel/pages/ClientsPage"), "ClientsPage") },

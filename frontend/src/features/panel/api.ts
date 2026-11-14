@@ -250,6 +250,38 @@ export const useSetQueueStatus = () =>
 export const useToggleQueueOpen = () =>
   useQueueAction(({ id, open }: { id: string; open: boolean }) => api.patch(`/panel/queue/professionals/${id}/open`, { open }));
 
+// ---------- Relatórios ----------
+
+export interface Report {
+  from: string;
+  to: string;
+  mode: "SCHEDULE" | "QUEUE";
+  totals: {
+    done: number;
+    revenueCents: number;
+    ticketCents: number;
+    noShow: number;
+    noShowRate: number;
+    canceled: number;
+    canceledByClient: number;
+    clients: number;
+    newClients: number;
+    upcoming: number;
+    upcomingRevenueCents: number;
+  };
+  previous: { from: string; to: string; done: number; revenueCents: number };
+  byProfessional: { id: string; name: string; done: number; revenueCents: number; rating: { average: number; count: number } | null }[];
+  byService: { id: string; name: string; done: number; revenueCents: number }[];
+  byWeekday: { weekday: number; done: number; revenueCents: number }[];
+}
+
+export const useReport = (from: string, to: string) =>
+  useQuery({
+    queryKey: [...panelKeys.all, "report", from, to],
+    queryFn: () => api.get<Report>(`/panel/reports${qs({ from, to })}`),
+    placeholderData: (prev) => prev,
+  });
+
 // ---------- Lembretes (dia seguinte) ----------
 
 export interface ReminderItem {
