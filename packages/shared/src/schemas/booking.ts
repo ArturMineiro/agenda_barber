@@ -1,6 +1,6 @@
 import { z } from "zod";
 import { APPOINTMENT_STATUS } from "../enums";
-import { dateStringSchema, idSchema, optionalTextSchema, phoneSchema } from "./common";
+import { dateStringSchema, idSchema, nameSchema, optionalTextSchema, phoneSchema } from "./common";
 
 export const availabilityQuerySchema = z.object({
   serviceId: idSchema,
@@ -14,7 +14,7 @@ export const createBookingSchema = z.object({
   serviceId: idSchema,
   professionalId: idSchema,
   startsAt: z.iso.datetime({ offset: true }),
-  clientName: z.string().trim().min(2, "Informe seu nome"),
+  clientName: nameSchema("Informe seu nome"),
   clientPhone: phoneSchema,
   notes: optionalTextSchema(300),
 });

@@ -109,8 +109,11 @@ export function NewAppointmentDialog({ open, onClose, initialDate }: Props) {
           <Select
             value={serviceId}
             onChange={(e) => {
-              setServiceId(e.target.value);
+              const id = e.target.value;
+              setServiceId(id);
               setSlot(null);
+              // o profissional escolhido pode não fazer o serviço novo
+              if (professionalId && !pros?.some((p) => p.id === professionalId && p.serviceIds.includes(id))) setProfessionalId("");
             }}
           >
             <option value="">Selecione…</option>

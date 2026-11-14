@@ -150,10 +150,11 @@ export const useTimeOffs = () =>
 export function useCreateTimeOff() {
   const qc = useQueryClient();
   return useMutation({
-    mutationFn: (input: TimeOffInput) => api.post("/panel/time-offs", input),
-    onSuccess: () => {
+    /** conflicts = clientes já marcados no período (a folga não desmarca ninguém sozinha) */
+    mutationFn: (input: TimeOffInput) => api.post<TimeOff & { conflicts: number }>("/panel/time-offs", input),
+    onSuccess: (r) => {
       qc.invalidateQueries({ queryKey: panelKeys.timeOffs() });
-      toast.success("Bloqueio criado");
+      if (!r.conflicts) toast.success("Folga salva");
     },
   });
 }

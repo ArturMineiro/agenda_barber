@@ -1,8 +1,8 @@
 import { z } from "zod";
-import { centsSchema, dateStringSchema, idSchema, minuteOfDaySchema, optionalImageSchema, optionalTextSchema } from "./common";
+import { centsSchema, dateStringSchema, idSchema, minuteOfDaySchema, nameSchema, optionalImageSchema, optionalTextSchema } from "./common";
 
 export const serviceSchema = z.object({
-  name: z.string().trim().min(2, "Informe o nome do serviço"),
+  name: nameSchema("Informe o nome do serviço"),
   description: optionalTextSchema(300),
   durationMinutes: z.number().int().min(5, "Mínimo 5 min").max(480, "Máximo 8h"),
   priceCents: centsSchema,
@@ -11,7 +11,7 @@ export const serviceSchema = z.object({
 export type ServiceInput = z.input<typeof serviceSchema>;
 
 export const professionalSchema = z.object({
-  name: z.string().trim().min(2, "Informe o nome"),
+  name: nameSchema("Informe o nome"),
   bio: optionalTextSchema(300),
   avatarUrl: optionalImageSchema,
   active: z.boolean(),

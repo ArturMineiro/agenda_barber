@@ -1,8 +1,8 @@
 import { z } from "zod";
-import { centsSchema, idSchema, optionalTextSchema } from "./common";
+import { centsSchema, idSchema, nameSchema, optionalTextSchema } from "./common";
 
 export const planSchema = z.object({
-  name: z.string().trim().min(2, "Informe o nome"),
+  name: nameSchema("Informe o nome", 60),
   description: optionalTextSchema(300),
   priceCents: centsSchema,
   /** null = ilimitado */

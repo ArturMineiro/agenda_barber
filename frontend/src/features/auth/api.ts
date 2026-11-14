@@ -1,5 +1,5 @@
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
-import type { LoginInput, RegisterOwnerInput } from "@navalha/shared";
+import type { ChangePasswordInput, LoginInput, RegisterOwnerInput } from "@navalha/shared";
 import { api, ApiError } from "@/lib/api";
 import type { User } from "@/types/api";
 
@@ -46,6 +46,13 @@ export function useLogout() {
       qc.clear();
       qc.setQueryData(meKey, null);
     },
+  });
+}
+
+export function useChangePassword() {
+  return useMutation({
+    mutationFn: (input: ChangePasswordInput) => api.post("/auth/password", input),
+    meta: { silent: true },
   });
 }
 

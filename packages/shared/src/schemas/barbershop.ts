@@ -2,6 +2,7 @@ import { z } from "zod";
 import { BOOKING_MODES, PAGE_THEMES } from "../enums";
 import {
   hexColorSchema,
+  nameSchema,
   optionalPhoneSchema,
   optionalTextSchema,
   optionalImageSchema,
@@ -12,7 +13,7 @@ export const SLOT_INTERVALS = [10, 15, 20, 30, 60] as const;
 
 /** Personalização da página pública e regras de agenda, feita pelo dono */
 export const barbershopSettingsSchema = z.object({
-  name: z.string().trim().min(2, "Informe o nome"),
+  name: nameSchema("Informe o nome"),
   slug: slugSchema,
   description: optionalTextSchema(600),
   phone: optionalPhoneSchema,

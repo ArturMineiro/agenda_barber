@@ -1,5 +1,6 @@
 import * as React from "react";
-import { useSearchParams } from "react-router-dom";
+import { useNavigate, useSearchParams } from "react-router-dom";
+import { toast } from "sonner";
 import { Ban, CalendarOff, Clock, Pencil, Plus, Trash2, Users } from "lucide-react";
 import { professionalSchema, workingHoursSchema } from "@navalha/shared";
 import { Button } from "@/components/ui/button";
@@ -9,7 +10,7 @@ import { Dialog } from "@/components/ui/dialog";
 import { Field, Input, Select, Textarea } from "@/components/ui/input";
 import { Avatar, EmptyState, PageHeader, Skeleton } from "@/components/ui/misc";
 import { Switch } from "@/components/ui/switch";
-import { cn, formatDateTime, toDateKey } from "@/lib/utils";
+import { addDays, cn, formatDateTime, formatTime, fromDateKey, toDateKey, zonedDateTimeToISO } from "@/lib/utils";
 import type { Professional, WorkingHour } from "@/types/api";
 import {
   useBarbershop,
@@ -255,27 +256,62 @@ function HoursDialog({ pro, onClose }: { pro: Professional | null; onClose: () =
   );
 }
 
+const dayFmt = new Intl.DateTimeFormat("pt-BR", { weekday: "short", day: "2-digit", month: "2-digit", timeZone: "America/Sao_Paulo" });
+const day = (d: Date) => dayFmt.format(d).replace(".", "");
+
+/** "sáb, 15/11 · dia inteiro", "15/11 até 20/11", "sáb, 15/11 · 12:00 às 13:00" */
+function describeTimeOff(startsAt: string, endsAt: string) {
+  const s = new Date(startsAt);
+  const e = new Date(endsAt);
+  // dia inteiro termina à meia-noite seguinte (ou 23:59, nos bloqueios antigos)
+  if (formatTime(s) === "00:00" && ["00:00", "23:59"].includes(formatTime(e))) {
+    const last = new Date(e.getTime() - 60_000);
+    return day(s) === day(last) ? `${day(s)} · dia inteiro` : `${day(s)} até ${day(last)}`;
+  }
+  if (day(s) === day(e)) return `${day(s)} · ${formatTime(s)} às ${formatTime(e)}`;
+  return `${formatDateTime(startsAt)} → ${formatDateTime(endsAt)}`;
+}
+
 /** Folgas, férias, compromissos: bloqueiam a agenda do profissional */
 function TimeOffSection({ pros }: { pros: Professional[] }) {
   const { data: offs } = useTimeOffs();
+  const { data: shop } = useBarbershop();
   const create = useCreateTimeOff();
   const remove = useDeleteTimeOff();
+  const navigate = useNavigate();
   // atalho "Marcar folga" do início do painel: /painel/equipe?folga=1 já abre o formulário
   const [params] = useSearchParams();
   const [open, setOpen] = React.useState(() => params.get("folga") === "1");
   const today = toDateKey(new Date());
-  const [f, setF] = React.useState({ professionalId: "", date: today, allDay: true, start: "12:00", end: "13:00", reason: "" });
+  const [f, setF] = React.useState({ professionalId: "", date: today, endDate: today, allDay: true, start: "12:00", end: "13:00", reason: "" });
+  const activePros = pros.filter((p) => p.active);
+  const firstProId = activePros[0]?.id ?? pros[0]?.id;
 
   React.useEffect(() => {
-    if (pros[0] && !f.professionalId) setF((x) => ({ ...x, professionalId: pros[0]!.id }));
-  }, [pros, f.professionalId]);
+    if (firstProId && !f.professionalId) setF((x) => ({ ...x, professionalId: firstProId }));
+  }, [firstProId, f.professionalId]);
 
   const submit = () => {
-    const startsAt = new Date(`${f.date}T${f.allDay ? "00:00" : f.start}:00`);
-    const endsAt = new Date(`${f.date}T${f.allDay ? "23:59" : f.end}:00`);
+    if (f.allDay && f.endDate < f.date) return toast.error("O último dia precisa ser igual ou depois do primeiro");
+    // horário da barbearia (não o do aparelho); dia inteiro vai até a meia-noite seguinte ao último dia
+    const tz = shop?.timezone ?? "America/Sao_Paulo";
+    const startsAt = zonedDateTimeToISO(f.date, f.allDay ? "00:00" : f.start, tz);
+    const endsAt = f.allDay
+      ? zonedDateTimeToISO(toDateKey(addDays(fromDateKey(f.endDate), 1)), "00:00", tz)
+      : zonedDateTimeToISO(f.date, f.end, tz);
     create.mutate(
-      { professionalId: f.professionalId, startsAt: startsAt.toISOString(), endsAt: endsAt.toISOString(), reason: f.reason },
-      { onSuccess: () => setOpen(false) },
+      { professionalId: f.professionalId, startsAt, endsAt, reason: f.reason },
+      {
+        onSuccess: (r) => {
+          setOpen(false);
+          if (r.conflicts) {
+            toast.warning(
+              `Folga salva, mas ${r.conflicts} cliente(s) já estavam marcados nesse período e continuam na agenda. Desmarque e avise cada um.`,
+              { duration: 12_000, action: { label: "Ver agenda", onClick: () => navigate(`/painel/agenda?data=${f.date}`) } },
+            );
+          }
+        },
+      },
     );
   };
 
@@ -297,9 +333,7 @@ function TimeOffSection({ pros }: { pros: Professional[] }) {
               <li key={o.id} className="flex items-center gap-3 py-2.5">
                 <CalendarOff className="size-4 text-zinc-400" />
                 <div className="min-w-0 flex-1 text-sm">
-                  <p className="font-medium">
-                    {formatDateTime(o.startsAt)} → {formatDateTime(o.endsAt)}
-                  </p>
+                  <p className="font-medium first-letter:uppercase">{describeTimeOff(o.startsAt, o.endsAt)}</p>
                   <p className="text-zinc-500">
                     {pros.length > 1 && `${o.professional.name} · `}
                     {o.reason ?? "Sem motivo"}
@@ -332,10 +366,10 @@ function TimeOffSection({ pros }: { pros: Professional[] }) {
         }
       >
         <div className="space-y-4">
-          {pros.length > 1 && (
+          {activePros.length > 1 && (
             <Field label="Profissional">
               <Select value={f.professionalId} onChange={(e) => setF({ ...f, professionalId: e.target.value })}>
-                {pros.map((p) => (
+                {activePros.map((p) => (
                   <option key={p.id} value={p.id}>
                     {p.name}
                   </option>
@@ -343,10 +377,31 @@ function TimeOffSection({ pros }: { pros: Professional[] }) {
               </Select>
             </Field>
           )}
-          <Field label="Data">
-            <Input type="date" min={today} value={f.date} onChange={(e) => setF({ ...f, date: e.target.value })} />
-          </Field>
-          <Switch checked={f.allDay} onChange={(allDay) => setF({ ...f, allDay })} label="Dia inteiro" />
+          <Switch checked={f.allDay} onChange={(allDay) => setF({ ...f, allDay })} label="Dia inteiro" description="Desligue para bloquear só algumas horas" />
+          {f.allDay ? (
+            <div className="grid grid-cols-2 gap-3">
+              <Field label="De">
+                <Input
+                  type="date"
+                  min={today}
+                  value={f.date}
+                  onChange={(e) => e.target.value && setF({ ...f, date: e.target.value, endDate: f.endDate < e.target.value ? e.target.value : f.endDate })}
+                />
+              </Field>
+              <Field label="Até" hint="Férias: escolha o último dia">
+                <Input type="date" min={f.date} value={f.endDate} onChange={(e) => e.target.value && setF({ ...f, endDate: e.target.value })} />
+              </Field>
+            </div>
+          ) : (
+            <Field label="Data">
+              <Input
+                type="date"
+                min={today}
+                value={f.date}
+                onChange={(e) => e.target.value && setF({ ...f, date: e.target.value, endDate: f.endDate < e.target.value ? e.target.value : f.endDate })}
+              />
+            </Field>
+          )}
           {!f.allDay && (
             <div className="grid grid-cols-2 gap-3">
               <Field label="Das">

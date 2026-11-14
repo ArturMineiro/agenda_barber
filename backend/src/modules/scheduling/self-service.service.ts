@@ -1,9 +1,10 @@
 import { DateTime } from "luxon";
-import { Prisma, type Appointment, type Barbershop } from "@prisma/client";
+import type { Appointment, Barbershop } from "@prisma/client";
 import { REVIEW_WINDOW_DAYS } from "@navalha/shared";
 import { prisma } from "../../lib/prisma";
 import { AppError, badRequest, conflict, notFound } from "../../lib/errors";
 import { getAvailability } from "./availability.service";
+import { assertSlotFree, inSlotTransaction } from "./booking.service";
 import { notifyCancel, notifyReschedule } from "../push/push.service";
 
 /**
@@ -104,36 +105,16 @@ export async function rescheduleByClient(token: string, startsAtIso: string, pro
     throw conflict("Este horário não está mais disponível", "SLOT_UNAVAILABLE");
   }
 
-  try {
-    const updated = await prisma.$transaction(
-      async (tx) => {
-        const clash = await tx.appointment.findFirst({
-          where: {
-            id: { not: appt.id },
-            professionalId,
-            status: { not: "CANCELED" },
-            startsAt: { lt: endsAt },
-            endsAt: { gt: startsAt },
-          },
-          select: { id: true },
-        });
-        if (clash) throw conflict("Este horário não está mais disponível", "SLOT_UNAVAILABLE");
-        return tx.appointment.update({
-          where: { id: appt.id },
-          data: { startsAt, endsAt, professionalId, rescheduleCount: { increment: 1 } },
-          include: { professional: { select: { name: true } } },
-        });
-      },
-      { isolationLevel: Prisma.TransactionIsolationLevel.Serializable },
-    );
-    void notifyReschedule({ ...appt, startsAt: updated.startsAt, professional: updated.professional }, appt.startsAt);
-    return updated;
-  } catch (err) {
-    if (err instanceof Prisma.PrismaClientKnownRequestError && err.code === "P2034") {
-      throw conflict("Este horário acabou de ser reservado, escolha outro", "SLOT_UNAVAILABLE");
-    }
-    throw err;
-  }
+  const updated = await inSlotTransaction(async (tx) => {
+    await assertSlotFree(tx, { professionalId, startsAt, endsAt, ignoreAppointmentId: appt.id });
+    return tx.appointment.update({
+      where: { id: appt.id },
+      data: { startsAt, endsAt, professionalId, rescheduleCount: { increment: 1 } },
+      include: { professional: { select: { name: true } } },
+    });
+  });
+  void notifyReschedule({ ...appt, startsAt: updated.startsAt, professional: updated.professional }, appt.startsAt);
+  return updated;
 }
 
 /** Formato público: sem dados internos da barbearia */

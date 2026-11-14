@@ -1,8 +1,8 @@
 import bcrypt from "bcryptjs";
-import { RESERVED_SLUGS, type registerOwnerSchema, type loginSchema } from "@navalha/shared";
+import { RESERVED_SLUGS, type changePasswordSchema, type registerOwnerSchema, type loginSchema } from "@navalha/shared";
 import type { z } from "zod";
 import { prisma } from "../../lib/prisma";
-import { conflict, unauthorized } from "../../lib/errors";
+import { badRequest, conflict, unauthorized } from "../../lib/errors";
 import { publicUserSelect } from "../../middlewares/auth";
 
 type RegisterOwner = z.output<typeof registerOwnerSchema>;
@@ -72,6 +72,14 @@ export async function registerOwner(input: RegisterOwner) {
 
     return user;
   });
+}
+
+export async function changePassword(userId: string, input: z.output<typeof changePasswordSchema>) {
+  const user = await prisma.user.findUnique({ where: { id: userId }, select: { passwordHash: true } });
+  if (!user || !(await bcrypt.compare(input.currentPassword, user.passwordHash))) {
+    throw badRequest("Senha atual incorreta", "WRONG_PASSWORD");
+  }
+  await prisma.user.update({ where: { id: userId }, data: { passwordHash: await bcrypt.hash(input.newPassword, 10) } });
 }
 
 export async function login(input: Login) {

@@ -12,6 +12,7 @@ import {
 } from "@navalha/shared";
 import { prisma } from "../../lib/prisma";
 import { badRequest, notFound } from "../../lib/errors";
+import { DEFAULT_TZ } from "../../lib/time";
 import { requireAuth, requireRole } from "../../middlewares/auth";
 import { refreshSubscriptionStanding, syncBilling } from "../billing/billing.service";
 
@@ -31,7 +32,8 @@ adminRoutes.get("/stats", async (_req, res) => {
     }),
     prisma.payment.aggregate({ where: { status: "OVERDUE" }, _sum: { amountCents: true }, _count: true }),
     prisma.payment.aggregate({
-      where: { status: "PAID", paidAt: { gte: DateTime.now().startOf("month").toJSDate() } },
+      // início do mês no horário de Brasília (o servidor roda em UTC)
+      where: { status: "PAID", paidAt: { gte: DateTime.now().setZone(DEFAULT_TZ).startOf("month").toJSDate() } },
       _sum: { amountCents: true },
     }),
   ]);

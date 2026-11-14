@@ -97,11 +97,9 @@ export async function refreshSubscriptionStanding(subscriptionId: string) {
   const stillLate = await prisma.payment.count({ where: { subscriptionId, status: "OVERDUE" } });
   if (stillLate > 0) return;
 
-  const sub = await prisma.subscription.update({
-    where: { id: subscriptionId },
-    data: { status: "ACTIVE" },
-    select: { barbershopId: true },
-  });
+  // só sai de PAST_DUE: assinatura em cortesia ou cancelada continua como está
+  await prisma.subscription.updateMany({ where: { id: subscriptionId, status: "PAST_DUE" }, data: { status: "ACTIVE" } });
+  const sub = await prisma.subscription.findUniqueOrThrow({ where: { id: subscriptionId }, select: { barbershopId: true } });
   await prisma.barbershop.updateMany({
     where: { id: sub.barbershopId, status: "SUSPENDED", statusReason: BILLING_SUSPENSION_REASON },
     data: { status: "ACTIVE", statusReason: null },

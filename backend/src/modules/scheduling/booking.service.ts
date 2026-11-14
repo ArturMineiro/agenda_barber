@@ -4,7 +4,7 @@ import type { createBookingSchema } from "@navalha/shared";
 import type { z } from "zod";
 import { prisma } from "../../lib/prisma";
 import { badRequest, conflict, notFound } from "../../lib/errors";
-import { getAvailability } from "./availability.service";
+import { BLOCKING_STATUSES, getAvailability } from "./availability.service";
 
 type BookingInput = z.output<typeof createBookingSchema>;
 
@@ -55,41 +55,60 @@ export async function createAppointment({ barbershop, input, source }: CreateApp
     if (!ok) throw conflict("Este horário não está mais disponível", "SLOT_UNAVAILABLE");
   }
 
-  try {
-    return await prisma.$transaction(
-      async (tx) => {
-        const clash = await tx.appointment.findFirst({
-          where: {
-            professionalId: professional.id,
-            status: { not: "CANCELED" },
-            startsAt: { lt: endsAt },
-            endsAt: { gt: startsAt },
-          },
-          select: { id: true },
-        });
-        if (clash) throw conflict("Este horário não está mais disponível", "SLOT_UNAVAILABLE");
-
-        return tx.appointment.create({
-          data: {
-            barbershopId: barbershop.id,
-            professionalId: professional.id,
-            serviceId: service.id,
-            clientName: input.clientName,
-            clientPhone: input.clientPhone,
-            notes: input.notes ?? null,
-            startsAt,
-            endsAt,
-            priceCents: service.priceCents,
-            source,
-          },
-          include: {
-            service: { select: { name: true, durationMinutes: true } },
-            professional: { select: { name: true } },
-          },
-        });
+  return inSlotTransaction(async (tx) => {
+    await assertSlotFree(tx, { professionalId: professional.id, startsAt, endsAt });
+    return tx.appointment.create({
+      data: {
+        barbershopId: barbershop.id,
+        professionalId: professional.id,
+        serviceId: service.id,
+        clientName: input.clientName,
+        clientPhone: input.clientPhone,
+        notes: input.notes ?? null,
+        startsAt,
+        endsAt,
+        priceCents: service.priceCents,
+        source,
       },
-      { isolationLevel: Prisma.TransactionIsolationLevel.Serializable },
-    );
+      include: {
+        service: { select: { name: true, durationMinutes: true } },
+        professional: { select: { name: true } },
+      },
+    });
+  });
+}
+
+interface SlotCheck {
+  professionalId: string;
+  startsAt: Date;
+  endsAt: Date;
+  /** ao remarcar/reconfirmar: o próprio agendamento não conta */
+  ignoreAppointmentId?: string;
+  message?: string;
+}
+
+/** Lança SLOT_UNAVAILABLE se algum agendamento que ocupa a cadeira bate com o intervalo */
+export async function assertSlotFree(tx: Prisma.TransactionClient, p: SlotCheck) {
+  const clash = await tx.appointment.findFirst({
+    where: {
+      professionalId: p.professionalId,
+      status: { in: BLOCKING_STATUSES },
+      startsAt: { lt: p.endsAt },
+      endsAt: { gt: p.startsAt },
+      ...(p.ignoreAppointmentId ? { id: { not: p.ignoreAppointmentId } } : {}),
+    },
+    select: { id: true },
+  });
+  if (clash) throw conflict(p.message ?? "Este horário não está mais disponível", "SLOT_UNAVAILABLE");
+}
+
+/**
+ * Transação SERIALIZABLE para checar + gravar horário.
+ * Se duas pessoas pegarem o mesmo horário ao mesmo tempo, o Postgres aborta uma (P2034).
+ */
+export async function inSlotTransaction<T>(fn: (tx: Prisma.TransactionClient) => Promise<T>): Promise<T> {
+  try {
+    return await prisma.$transaction(fn, { isolationLevel: Prisma.TransactionIsolationLevel.Serializable });
   } catch (err) {
     if (err instanceof Prisma.PrismaClientKnownRequestError && err.code === "P2034") {
       throw conflict("Este horário acabou de ser reservado, escolha outro", "SLOT_UNAVAILABLE");

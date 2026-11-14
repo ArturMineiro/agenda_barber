@@ -1,6 +1,7 @@
 import type { NextFunction, Request, Response } from "express";
 import { ZodError } from "zod";
 import { Prisma } from "@prisma/client";
+import multer from "multer";
 import { AppError } from "../lib/errors";
 
 export function notFoundHandler(_req: Request, res: Response) {
@@ -18,6 +19,19 @@ export function errorHandler(err: unknown, _req: Request, res: Response, _next: 
       code: "VALIDATION_ERROR",
       issues: err.issues.map((i) => ({ path: i.path.join("."), message: i.message })),
     });
+  }
+
+  // JSON malformado / corpo grande demais (express.json): erro do cliente, não do servidor
+  const bodyError = err as { type?: string; status?: number };
+  if (bodyError?.type === "entity.parse.failed") {
+    return res.status(400).json({ message: "Dados inválidos", code: "INVALID_JSON" });
+  }
+  if (bodyError?.type === "entity.too.large") {
+    return res.status(413).json({ message: "Conteúdo grande demais", code: "PAYLOAD_TOO_LARGE" });
+  }
+
+  if (err instanceof multer.MulterError) {
+    return res.status(400).json({ message: "Envie uma imagem por vez, no campo \"file\"", code: err.code });
   }
 
   if (err instanceof Prisma.PrismaClientKnownRequestError) {

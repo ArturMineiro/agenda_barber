@@ -29,8 +29,14 @@ const PLANS = [
 ];
 
 async function main() {
-  const email = process.env.SEED_ADMIN_EMAIL ?? "admin@navalha.app";
-  const password = process.env.SEED_ADMIN_PASSWORD ?? "admin12345";
+  // `||` e não `??`: o docker compose repassa a variável vazia ("") quando ela não foi preenchida no .env
+  const email = (process.env.SEED_ADMIN_EMAIL || "admin@navalha.app").trim().toLowerCase();
+  const password = process.env.SEED_ADMIN_PASSWORD || "";
+  if (!password && process.env.NODE_ENV === "production") {
+    throw new Error("Defina SEED_ADMIN_PASSWORD no .env (a senha padrão de desenvolvimento não é usada em produção)");
+  }
+  if (password && password.length < 8) throw new Error("SEED_ADMIN_PASSWORD precisa ter ao menos 8 caracteres");
+  const adminPassword = password || "admin12345";
 
   await prisma.user.upsert({
     where: { email },
@@ -39,10 +45,11 @@ async function main() {
       name: "Administrador",
       email,
       role: "SUPER_ADMIN",
-      passwordHash: await bcrypt.hash(password, 10),
+      passwordHash: await bcrypt.hash(adminPassword, 10),
     },
   });
-  console.log(`👑 Super admin: ${email} / ${password}`);
+  // a senha definida no .env não vai para o log; só a padrão de desenvolvimento aparece
+  console.log(`👑 Super admin: ${email}${password ? "" : " / admin12345"}`);
 
   for (const plan of PLANS) {
     const existing = await prisma.plan.findFirst({ where: { name: plan.name } });

@@ -1,9 +1,9 @@
 import { Router } from "express";
 import rateLimit from "express-rate-limit";
-import { loginSchema, registerOwnerSchema, slugSchema } from "@navalha/shared";
+import { changePasswordSchema, loginSchema, registerOwnerSchema, slugSchema } from "@navalha/shared";
 import { clearAuthCookie, setAuthCookie, signToken } from "../../lib/auth";
 import { requireAuth } from "../../middlewares/auth";
-import { isSlugAvailable, login, registerOwner } from "./auth.service";
+import { changePassword, isSlugAvailable, login, registerOwner } from "./auth.service";
 
 export const authRoutes = Router();
 
@@ -41,6 +41,13 @@ authRoutes.post("/logout", (_req, res) => {
 
 authRoutes.get("/me", requireAuth, (req, res) => {
   res.json({ user: req.user });
+});
+
+/** Troca a senha de quem está logado. Mesmo limite do login: protege contra adivinhar a senha atual. */
+authRoutes.post("/password", requireAuth, loginLimiter, async (req, res) => {
+  const input = changePasswordSchema.parse(req.body);
+  await changePassword(req.user!.id, input);
+  res.status(204).end();
 });
 
 /** Usado no cadastro para validar o link enquanto o usuário digita */

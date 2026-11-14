@@ -20,8 +20,8 @@ import { badRequest, conflict, forbidden, notFound } from "../../lib/errors";
 import { startOfDayInZone } from "../../lib/time";
 import { loadOwnerBarbershop, requireAuth, requireRole } from "../../middlewares/auth";
 import { isSlugAvailable } from "../auth/auth.service";
-import { getAvailability } from "../scheduling/availability.service";
-import { createAppointment } from "../scheduling/booking.service";
+import { BLOCKING_STATUSES, getAvailability } from "../scheduling/availability.service";
+import { assertSlotFree, createAppointment, inSlotTransaction } from "../scheduling/booking.service";
 import { deleteImage } from "../uploads/uploads.service";
 
 export const panelRoutes = Router();
@@ -51,6 +51,19 @@ panelRoutes.put("/barbershop", async (req, res) => {
   const input = barbershopSettingsSchema.parse(req.body);
   if (!(await isSlugAvailable(input.slug, shop(req).id))) throw conflict("Este link já está em uso", "SLUG_TAKEN");
   const before = shop(req);
+
+  // no modo fila a agenda some do painel: clientes já marcados ficariam "invisíveis" para o dono
+  if (before.bookingMode === "SCHEDULE" && input.bookingMode === "QUEUE") {
+    const future = await prisma.appointment.count({
+      where: { barbershopId: before.id, status: "CONFIRMED", startsAt: { gte: new Date() } },
+    });
+    if (future > 0) {
+      throw conflict(
+        `Você tem ${future} agendamento(s) marcado(s) daqui pra frente. Atenda ou desmarque antes de mudar para ordem de chegada.`,
+        "HAS_FUTURE_APPOINTMENTS",
+      );
+    }
+  }
   const updated = await prisma.barbershop.update({ where: { id: before.id }, data: input });
   // imagem trocada ou removida: apaga o arquivo antigo do disco
   if (before.logoUrl !== updated.logoUrl) await deleteImage(before.logoUrl, before.id);
@@ -129,17 +142,16 @@ panelRoutes.get("/services", async (req, res) => {
 
 panelRoutes.post("/services", async (req, res) => {
   const input = serviceSchema.parse(req.body);
-  const position = await prisma.service.count({ where: { barbershopId: shop(req).id } });
-  const service = await prisma.service.create({ data: { ...input, barbershopId: shop(req).id, position } });
-
-  // barbearia solo: o serviço já entra para o único profissional
-  if (shop(req).teamType === "SOLO") {
-    const pros = await prisma.professional.findMany({ where: { barbershopId: shop(req).id }, select: { id: true } });
-    await prisma.professionalService.createMany({
-      data: pros.map((p) => ({ professionalId: p.id, serviceId: service.id })),
-      skipDuplicates: true,
-    });
-  }
+  const barbershopId = shop(req).id;
+  const [position, pros] = await Promise.all([
+    prisma.service.count({ where: { barbershopId } }),
+    prisma.professional.findMany({ where: { barbershopId, active: true }, select: { id: true } }),
+  ]);
+  // já entra para os profissionais ativos: serviço sem ninguém que faça não aparece na página pública.
+  // Na equipe, o dono tira de quem não faz em Equipe → Editar.
+  const service = await prisma.service.create({
+    data: { ...input, barbershopId, position, professionals: { create: pros.map((p) => ({ professionalId: p.id })) } },
+  });
   res.status(201).json(service);
 });
 
@@ -157,9 +169,12 @@ panelRoutes.put("/services/:id", async (req, res) => {
 
 panelRoutes.delete("/services/:id", async (req, res) => {
   const service = await findOwnService(req);
-  const used = await prisma.appointment.count({ where: { serviceId: service.id } });
-  // com histórico, apenas desativa para não quebrar relatórios
-  if (used > 0) await prisma.service.update({ where: { id: service.id }, data: { active: false } });
+  const [appointments, queueEntries] = await Promise.all([
+    prisma.appointment.count({ where: { serviceId: service.id } }),
+    prisma.queueEntry.count({ where: { serviceId: service.id } }),
+  ]);
+  // com histórico (agenda ou fila), apenas desativa para não quebrar relatórios
+  if (appointments + queueEntries > 0) await prisma.service.update({ where: { id: service.id }, data: { active: false } });
   else {
     // apaga também os arquivos das fotos (os registros saem em cascata)
     const photos = await prisma.servicePhoto.findMany({ where: { serviceId: service.id } });
@@ -247,8 +262,12 @@ panelRoutes.put("/professionals/:id", async (req, res) => {
 
 panelRoutes.delete("/professionals/:id", async (req, res) => {
   const pro = await findOwnProfessional(req);
-  const used = await prisma.appointment.count({ where: { professionalId: pro.id } });
-  if (used > 0) await prisma.professional.update({ where: { id: pro.id }, data: { active: false } });
+  // com histórico (agenda ou fila), só desativa: apagar levaria junto atendimentos e faturamento
+  const [appointments, queueEntries] = await Promise.all([
+    prisma.appointment.count({ where: { professionalId: pro.id } }),
+    prisma.queueEntry.count({ where: { professionalId: pro.id } }),
+  ]);
+  if (appointments + queueEntries > 0) await prisma.professional.update({ where: { id: pro.id }, data: { active: false } });
   else {
     await prisma.professional.delete({ where: { id: pro.id } });
     await deleteImage(pro.avatarUrl, shop(req).id);
@@ -284,16 +303,16 @@ panelRoutes.post("/time-offs", async (req, res) => {
     where: { id: input.professionalId, barbershopId: shop(req).id },
   });
   if (!pro) throw notFound("Profissional não encontrado");
-  res.status(201).json(
-    await prisma.timeOff.create({
-      data: {
-        professionalId: pro.id,
-        startsAt: new Date(input.startsAt),
-        endsAt: new Date(input.endsAt),
-        reason: input.reason ?? null,
-      },
+  const startsAt = new Date(input.startsAt);
+  const endsAt = new Date(input.endsAt);
+  const [timeOff, conflicts] = await Promise.all([
+    prisma.timeOff.create({ data: { professionalId: pro.id, startsAt, endsAt, reason: input.reason ?? null } }),
+    // a folga não desmarca ninguém sozinha: avisa quantos clientes já estavam marcados no período
+    prisma.appointment.count({
+      where: { professionalId: pro.id, status: "CONFIRMED", startsAt: { lt: endsAt }, endsAt: { gt: startsAt } },
     }),
-  );
+  ]);
+  res.status(201).json({ ...timeOff, conflicts });
 });
 
 panelRoutes.delete("/time-offs/:id", async (req, res) => {
@@ -337,14 +356,30 @@ panelRoutes.post("/appointments", async (req, res) => {
 
 panelRoutes.patch("/appointments/:id/status", async (req, res) => {
   const { status } = updateAppointmentStatusSchema.parse(req.body);
-  const { count } = await prisma.appointment.updateMany({
-    where: { id: req.params.id, barbershopId: shop(req).id },
-    data:
-      status === "CANCELED"
-        ? { status, canceledAt: new Date(), canceledBy: "barbershop" }
-        : { status, canceledAt: null, canceledBy: null, cancelReason: null },
+  const appt = await prisma.appointment.findFirst({ where: { id: String(req.params.id), barbershopId: shop(req).id } });
+  if (!appt) throw notFound("Agendamento não encontrado");
+
+  const data =
+    status === "CANCELED"
+      ? { status, canceledAt: new Date(), canceledBy: "barbershop" }
+      : { status, canceledAt: null, canceledBy: null, cancelReason: null };
+
+  // cancelado/"não veio" liberou a cadeira: ao voltar a ocupar, não pode bater com quem entrou no lugar
+  const reoccupies = BLOCKING_STATUSES.includes(status) && !BLOCKING_STATUSES.includes(appt.status);
+  if (!reoccupies) {
+    await prisma.appointment.update({ where: { id: appt.id }, data });
+    return res.json({ ok: true });
+  }
+  await inSlotTransaction(async (tx) => {
+    await assertSlotFree(tx, {
+      professionalId: appt.professionalId,
+      startsAt: appt.startsAt,
+      endsAt: appt.endsAt,
+      ignoreAppointmentId: appt.id,
+      message: "Outro cliente já está nesse horário. Remarque um dos dois antes.",
+    });
+    await tx.appointment.update({ where: { id: appt.id }, data });
   });
-  if (!count) throw notFound("Agendamento não encontrado");
   res.json({ ok: true });
 });
 
@@ -362,12 +397,22 @@ panelRoutes.post("/appointments/:id/cancel", async (req, res) => {
 /** Histórico de clientes (agrupado por telefone), somando agenda e fila */
 panelRoutes.get("/clients", async (req, res) => {
   const { q } = z.object({ q: z.string().trim().optional() }).parse(req.query);
-  const search = q ? { OR: [{ clientName: { contains: q, mode: "insensitive" as const } }, { clientPhone: { contains: q } }] } : {};
+  // telefone fica salvo só com dígitos: "(11) 9999" também precisa achar
+  const digits = q?.replace(/\D/g, "") ?? "";
+  const search = q
+    ? {
+        OR: [
+          { clientName: { contains: q, mode: "insensitive" as const } },
+          ...(digits ? [{ clientPhone: { contains: digits } }] : []),
+        ],
+      }
+    : {};
 
   const [fromAgenda, fromQueue] = await Promise.all([
     prisma.appointment.groupBy({
       by: ["clientPhone"],
-      where: { barbershopId: shop(req).id, status: { not: "CANCELED" }, ...search },
+      // falta e cancelamento não contam como visita nem somam no total gasto
+      where: { barbershopId: shop(req).id, status: { in: ["CONFIRMED", "COMPLETED"] }, ...search },
       _count: true,
       _max: { startsAt: true, clientName: true },
       _sum: { priceCents: true },

@@ -110,8 +110,14 @@ export async function setQueueStatus(barbershop: Barbershop, id: string, status:
   const now = new Date();
 
   if (status === "IN_SERVICE") {
+    // só a cadeira de hoje: atendimento esquecido de outro dia não aparece no painel e travaria a fila
     const busy = await prisma.queueEntry.findFirst({
-      where: { professionalId: entry.professionalId, status: "IN_SERVICE", id: { not: entry.id } },
+      where: {
+        professionalId: entry.professionalId,
+        status: "IN_SERVICE",
+        id: { not: entry.id },
+        joinedAt: { gte: todayStart(barbershop) },
+      },
     });
     if (busy) throw conflict(`Finalize o atendimento de ${busy.clientName} antes de chamar o próximo`);
     return prisma.queueEntry.update({ where: { id }, data: { status, startedAt: now, finishedAt: null } });

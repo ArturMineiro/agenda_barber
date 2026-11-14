@@ -1,8 +1,14 @@
 import { DateTime } from "luxon";
-import type { Barbershop } from "@prisma/client";
+import type { AppointmentStatus, Barbershop } from "@prisma/client";
 import { prisma } from "../../lib/prisma";
 import { badRequest, notFound } from "../../lib/errors";
 import { overlaps, startOfDayInZone, weekdayOf } from "../../lib/time";
+
+/**
+ * Status que ocupam a cadeira. Cancelado e "não veio" liberam o horário
+ * (o dono pode encaixar alguém quando o cliente falta).
+ */
+export const BLOCKING_STATUSES: AppointmentStatus[] = ["CONFIRMED", "COMPLETED"];
 
 export interface Slot {
   /** ISO com offset, ex.: 2026-11-05T14:30:00.000-03:00 */
@@ -79,7 +85,7 @@ export async function getAvailability(opts: AvailabilityOptions): Promise<{ slot
     prisma.appointment.findMany({
       where: {
         professionalId: { in: ids },
-        status: { not: "CANCELED" },
+        status: { in: BLOCKING_STATUSES },
         ...(opts.ignoreAppointmentId ? { id: { not: opts.ignoreAppointmentId } } : {}),
         startsAt: { lt: rangeEnd },
         endsAt: { gt: rangeStart },
@@ -122,6 +128,14 @@ export async function getAvailability(opts: AvailabilityOptions): Promise<{ slot
     }
   }
 
-  const slots = [...slotMap.values()].sort((a, b) => a.startsAt.localeCompare(b.startsAt));
+  // "sem preferência" usa o primeiro da lista: quem tem menos clientes no dia vem antes (divide o movimento)
+  const load = new Map<string, number>();
+  for (const a of appointments) load.set(a.professionalId, (load.get(a.professionalId) ?? 0) + 1);
+  const order = new Map(ids.map((id, i) => [id, i]));
+  const byLoad = (a: string, b: string) => (load.get(a) ?? 0) - (load.get(b) ?? 0) || order.get(a)! - order.get(b)!;
+
+  const slots = [...slotMap.values()]
+    .map((s) => ({ ...s, professionalIds: s.professionalIds.sort(byLoad) }))
+    .sort((a, b) => a.startsAt.localeCompare(b.startsAt));
   return { slots, durationMinutes: duration };
 }

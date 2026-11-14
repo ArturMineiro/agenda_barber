@@ -271,11 +271,17 @@ function Reschedule({ appt, token, onDone }: { appt: MyAppointment; token: strin
   const reschedule = useRescheduleMine(token);
   const max = toDateKey(addDays(new Date(), appt.barbershop.maxAdvanceDays));
   const current = new Date(appt.startsAt).getTime();
-  const slots = data?.slots.filter((s) => new Date(s.startsAt).getTime() !== current || (proId && proId !== appt.professional.id)) ?? [];
+  // esconde só o horário atual com o mesmo barbeiro (com "qualquer um", vale se outro estiver livre)
+  const isSameAsNow = (s: Slot) =>
+    new Date(s.startsAt).getTime() === current && (proId ? proId === appt.professional.id : s.professionalIds.every((id) => id === appt.professional.id));
+  const slots = data?.slots.filter((s) => !isSameAsNow(s)) ?? [];
 
   const confirm = () => {
     if (!slot) return;
-    const professionalId = proId ?? slot.professionalIds[0]!;
+    // "qualquer um": se o barbeiro de antes estiver livre no novo horário, continua com ele
+    // (no mesmo horário de agora, só faz sentido trocar de barbeiro)
+    const keepCurrent = slot.professionalIds.includes(appt.professional.id) && new Date(slot.startsAt).getTime() !== current;
+    const professionalId = proId ?? (keepCurrent ? appt.professional.id : slot.professionalIds.find((id) => id !== appt.professional.id)!);
     reschedule.mutate(
       { startsAt: slot.startsAt, professionalId },
       {

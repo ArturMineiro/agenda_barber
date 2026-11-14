@@ -1,10 +1,11 @@
 import * as React from "react";
 import { NavLink, Outlet, useLocation, useNavigate } from "react-router-dom";
-import { LogOut, Menu, type LucideIcon } from "lucide-react";
+import { KeyRound, LogOut, Menu, type LucideIcon } from "lucide-react";
 import { Dialog } from "@/components/ui/dialog";
 import { Logo } from "@/components/Logo";
 import { Avatar } from "@/components/ui/misc";
 import { useLogout, useMe } from "@/features/auth/api";
+import { ChangePasswordDialog } from "@/features/auth/ChangePasswordDialog";
 import { cn } from "@/lib/utils";
 
 export interface NavItem {
@@ -35,6 +36,7 @@ export function AppShell({ nav, header, banner }: AppShellProps) {
   const mobileNav = nav.filter((n) => n.mobile);
   const moreNav = nav.filter((n) => !n.mobile);
   const [moreOpen, setMoreOpen] = React.useState(false);
+  const [passwordOpen, setPasswordOpen] = React.useState(false);
   const location = useLocation();
   const moreActive = moreNav.some((n) => location.pathname.startsWith(n.to));
 
@@ -73,6 +75,9 @@ export function AppShell({ nav, header, banner }: AppShellProps) {
               <p className="truncate text-sm font-medium">{user.name}</p>
               <p className="truncate text-xs text-zinc-500">{user.email}</p>
             </div>
+            <button onClick={() => setPasswordOpen(true)} className="rounded-lg p-2 text-zinc-400 hover:bg-zinc-100 hover:text-zinc-700" title="Alterar senha">
+              <KeyRound className="size-4" />
+            </button>
             <button onClick={handleLogout} className="rounded-lg p-2 text-zinc-400 hover:bg-zinc-100 hover:text-zinc-700" title="Sair">
               <LogOut className="size-4" />
             </button>
@@ -83,9 +88,14 @@ export function AppShell({ nav, header, banner }: AppShellProps) {
       {/* Topo mobile */}
       <header className="sticky top-0 z-30 flex items-center justify-between border-b border-zinc-200/70 bg-white/85 px-4 py-3 backdrop-blur-lg lg:hidden">
         <Logo className="text-lg" />
-        <button onClick={handleLogout} className="rounded-lg p-2 text-zinc-500 hover:bg-zinc-100" aria-label="Sair">
-          <LogOut className="size-5" />
-        </button>
+        <div className="flex gap-1">
+          <button onClick={() => setPasswordOpen(true)} className="rounded-lg p-2 text-zinc-500 hover:bg-zinc-100" aria-label="Alterar senha">
+            <KeyRound className="size-5" />
+          </button>
+          <button onClick={handleLogout} className="rounded-lg p-2 text-zinc-500 hover:bg-zinc-100" aria-label="Sair">
+            <LogOut className="size-5" />
+          </button>
+        </div>
       </header>
 
       {banner}
@@ -162,6 +172,8 @@ export function AppShell({ nav, header, banner }: AppShellProps) {
           </button>
         </div>
       </Dialog>
+
+      <ChangePasswordDialog open={passwordOpen} onClose={() => setPasswordOpen(false)} />
     </div>
   );
 }

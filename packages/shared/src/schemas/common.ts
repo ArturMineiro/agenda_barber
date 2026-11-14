@@ -2,6 +2,12 @@ import { z } from "zod";
 
 export const idSchema = z.string().min(1);
 
+/** Nome de pessoa, barbearia ou serviço: curto o bastante para caber em listas, notificações e no card de prévia */
+export const nameSchema = (required: string, max = 80) => z.string().trim().min(2, required).max(max, `Máximo de ${max} caracteres`);
+
+/** bcrypt só considera os primeiros 72 bytes */
+export const passwordSchema = z.string().min(8, "A senha precisa ter ao menos 8 caracteres").max(72, "Máximo de 72 caracteres");
+
 const digits = (v: string) => v.replace(/\D/g, "");
 
 /** Telefone brasileiro: aceita com ou sem máscara, guarda só dígitos */

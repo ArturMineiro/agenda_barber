@@ -1,6 +1,6 @@
 import { z } from "zod";
 import { BOOKING_MODES, TEAM_TYPES } from "../enums";
-import { phoneSchema, slugSchema } from "./common";
+import { nameSchema, passwordSchema, phoneSchema, slugSchema } from "./common";
 
 export const loginSchema = z.object({
   email: z.string().trim().toLowerCase().pipe(z.email("E-mail inválido")),
@@ -13,16 +13,28 @@ export type LoginInput = z.input<typeof loginSchema>;
  * que fica PENDENTE até o super admin aprovar e atribuir um plano.
  */
 export const registerOwnerSchema = z.object({
-  name: z.string().trim().min(2, "Informe seu nome"),
+  name: nameSchema("Informe seu nome"),
   email: z.string().trim().toLowerCase().pipe(z.email("E-mail inválido")),
   phone: phoneSchema,
-  password: z.string().min(8, "A senha precisa ter ao menos 8 caracteres"),
+  password: passwordSchema,
   barbershop: z.object({
-    name: z.string().trim().min(2, "Informe o nome da barbearia"),
+    name: nameSchema("Informe o nome da barbearia"),
     slug: slugSchema,
     teamType: z.enum(TEAM_TYPES),
     bookingMode: z.enum(BOOKING_MODES),
-    city: z.string().trim().min(2, "Informe a cidade"),
+    city: nameSchema("Informe a cidade"),
   }),
 });
 export type RegisterOwnerInput = z.input<typeof registerOwnerSchema>;
+
+/** Troca de senha de quem está logado (dono ou admin) */
+export const changePasswordSchema = z
+  .object({
+    currentPassword: z.string().min(1, "Informe a senha atual"),
+    newPassword: passwordSchema,
+  })
+  .refine((v) => v.newPassword !== v.currentPassword, {
+    message: "A nova senha precisa ser diferente da atual",
+    path: ["newPassword"],
+  });
+export type ChangePasswordInput = z.input<typeof changePasswordSchema>;
