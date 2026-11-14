@@ -8,6 +8,7 @@ import {
   barbershopSettingsSchema,
   manualAppointmentSchema,
   professionalSchema,
+  reviewVisibilitySchema,
   serviceSchema,
   timeOffSchema,
   updateAppointmentStatusSchema,
@@ -402,3 +403,37 @@ function supportSuffix() {
   if (d.length === 11) return ` no WhatsApp (${d.slice(0, 2)}) ${d.slice(2, 7)}-${d.slice(7)}`;
   return d ? ` no WhatsApp ${d}` : "";
 }
+
+// ---------- Avaliações ----------
+
+/** Todas as avaliações (inclusive ocultas), com média e distribuição de estrelas */
+panelRoutes.get("/reviews", async (req, res) => {
+  const where = { barbershopId: shop(req).id };
+  const [reviews, stats, dist] = await Promise.all([
+    prisma.review.findMany({
+      where,
+      orderBy: { createdAt: "desc" },
+      take: 200,
+      include: {
+        service: { select: { name: true } },
+        professional: { select: { name: true } },
+        appointment: { select: { startsAt: true, clientPhone: true } },
+      },
+    }),
+    prisma.review.aggregate({ where, _avg: { rating: true }, _count: true }),
+    prisma.review.groupBy({ by: ["rating"], where, _count: true }),
+  ]);
+  res.json({
+    average: stats._count ? Math.round((stats._avg.rating ?? 0) * 10) / 10 : null,
+    count: stats._count,
+    distribution: Object.fromEntries([1, 2, 3, 4, 5].map((n) => [n, dist.find((d) => d.rating === n)?._count ?? 0])),
+    reviews,
+  });
+});
+
+panelRoutes.patch("/reviews/:id", async (req, res) => {
+  const { hidden } = reviewVisibilitySchema.parse(req.body);
+  const { count } = await prisma.review.updateMany({ where: { id: String(req.params.id), barbershopId: shop(req).id }, data: { hidden } });
+  if (!count) throw notFound("Avaliação não encontrada");
+  res.json({ ok: true });
+});

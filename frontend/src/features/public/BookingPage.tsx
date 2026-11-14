@@ -26,6 +26,7 @@ import { addDays, cn, formatDuration, formatLongDate, formatMoney, formatTime, m
 import type { Slot } from "@/types/api";
 import { QueueView } from "./QueueView";
 import { Hero } from "./Hero";
+import { RatingInline, ReviewsSection } from "./Reviews";
 import { CatalogCarousel, ServiceSheet, ServiceThumb, type CatalogService } from "./Catalog";
 import { useCreateBooking, useMyAppointments, usePublicAvailability, usePublicBarbershop, type BookingResult, type PublicBarbershop } from "./api";
 
@@ -97,7 +98,7 @@ function ScheduleBooking({ data, slug }: { data: PublicBarbershop; slug: string 
 
   return (
     <>
-      <Hero shop={shop} compact={step !== "service"} />
+      <Hero shop={shop} compact={step !== "service"} rating={data.reviews} />
 
       <div ref={topRef} className="mx-auto max-w-xl scroll-mt-4 px-4 pt-5 pb-36">
         {step !== "service" && step !== "done" && (
@@ -122,8 +123,11 @@ function ScheduleBooking({ data, slug }: { data: PublicBarbershop; slug: string 
                   <div className="min-w-0 flex-1">
                     <p className="font-medium">{s.name}</p>
                     {s.description && <p className="mt-0.5 line-clamp-2 text-sm text-zinc-500">{s.description}</p>}
-                    <p className="mt-1 flex items-center gap-1 text-xs text-zinc-500">
-                      <Clock className="size-3" /> {formatDuration(s.durationMinutes)}
+                    <p className="mt-1 flex items-center gap-3 text-xs text-zinc-500">
+                      <span className="inline-flex items-center gap-1">
+                        <Clock className="size-3" /> {formatDuration(s.durationMinutes)}
+                      </span>
+                      <RatingInline rating={s.rating} />
                     </p>
                   </div>
                   <span className="font-semibold">{formatMoney(s.priceCents)}</span>
@@ -132,6 +136,7 @@ function ScheduleBooking({ data, slug }: { data: PublicBarbershop; slug: string 
               ))}
               {services.length === 0 && <p className="text-sm text-zinc-500">Nenhum serviço disponível no momento.</p>}
             </div>
+            <ReviewsSection reviews={data.reviews} showProfessional={shop.teamType === "TEAM" && data.professionals.length > 1} />
           </section>
         )}
 

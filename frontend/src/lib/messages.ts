@@ -32,6 +32,9 @@ export const messages = {
   delay: (c: Ctx, minutes: number) =>
     `Oi ${first(c.clientName)}, aqui é da *${c.shopName}*. Estamos com um atraso de cerca de ${minutes} min no seu horário das ${formatTime(c.startsAt)}. Desculpe o transtorno!`,
 
+  review: (c: Ctx) =>
+    `Oi ${first(c.clientName)}, obrigado por vir na *${c.shopName}*! ✂️\n\nO que achou do ${c.serviceName.toLowerCase()}? Avaliar leva 10 segundos e ajuda muito a gente${c.token ? `: ${appointmentLink(c.token)}` : ""}`,
+
   canceled: (c: Ctx, reason?: string | null) =>
     `Olá ${first(c.clientName)}, aqui é da *${c.shopName}*. Infelizmente precisamos desmarcar seu horário de ${when(c.startsAt)} (${c.serviceName}).${reason ? `\n\nMotivo: ${reason}` : ""}\n\nDesculpe o transtorno! Você pode escolher outro horário aqui: ${window.location.origin}/${c.shopSlug}`,
 };

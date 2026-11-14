@@ -1,5 +1,5 @@
 import { useMutation, useQueries, useQuery, useQueryClient } from "@tanstack/react-query";
-import type { AppointmentStatus, BookingMode, PageTheme, CreateBookingInput, RescheduleInput, TeamType } from "@navalha/shared";
+import type { AppointmentStatus, BookingMode, PageTheme, CreateBookingInput, RescheduleInput, ReviewInput, TeamType } from "@navalha/shared";
 import { api, qs } from "@/lib/api";
 import type { Slot } from "@/types/api";
 
@@ -31,8 +31,26 @@ export interface PublicBarbershop {
     priceCents: number;
     /** catálogo: a primeira é a capa */
     photos: { url: string; thumbUrl: string }[];
+    /** média das avaliações deste serviço (null = ainda sem avaliação) */
+    rating: { average: number; count: number } | null;
   }[];
+  reviews: {
+    average: number | null;
+    count: number;
+    latest: PublicReview[];
+  };
   professionals: { id: string; name: string; bio: string | null; avatarUrl: string | null; serviceIds: string[] }[];
+}
+
+export interface PublicReview {
+  id: string;
+  rating: number;
+  comment: string | null;
+  /** primeiro nome + inicial */
+  clientName: string;
+  createdAt: string;
+  service: string;
+  professional: string;
 }
 
 export interface BookingResult {
@@ -102,6 +120,9 @@ export interface MyAppointment {
   professionals: { id: string; name: string; avatarUrl: string | null }[];
   /** ainda dá para cancelar/remarcar pelo link */
   canManage: boolean;
+  /** já foi atendido e ainda está no prazo para avaliar */
+  canReview: boolean;
+  review: { rating: number; comment: string | null } | null;
   manageDeadline: string;
   cancelMinAdvanceMinutes: number;
   barbershop: Pick<
@@ -143,5 +164,13 @@ export function useRescheduleMine(token: string) {
     mutationFn: (input: RescheduleInput) => api.post(`/public/appointments/${token}/reschedule`, input),
     onSuccess: () => qc.invalidateQueries({ queryKey: myKey(token) }),
     meta: { silent: true },
+  });
+}
+
+export function useReviewMine(token: string) {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: (input: ReviewInput) => api.post<{ rating: number; comment: string | null }>(`/public/appointments/${token}/review`, input),
+    onSuccess: () => qc.invalidateQueries({ queryKey: myKey(token) }),
   });
 }

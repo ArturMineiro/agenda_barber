@@ -1,5 +1,5 @@
 import * as React from "react";
-import { Bell, CalendarCheck, Check, Clock, MessageCircle, MoreHorizontal, RotateCcw, Timer, UserX, X } from "lucide-react";
+import { Bell, CalendarCheck, Check, Clock, MessageCircle, MoreHorizontal, RotateCcw, Star, Timer, UserX, X } from "lucide-react";
 import type { AppointmentStatus } from "@navalha/shared";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
@@ -26,6 +26,8 @@ export function AppointmentCard({ appt, showProfessional }: { appt: Appointment;
   const meta = STATUS_META[appt.status];
   const inactive = appt.status === "CANCELED" || appt.status === "NO_SHOW";
   const upcoming = appt.status === "CONFIRMED" && new Date(appt.startsAt) > new Date();
+  // já atendido (ou o horário passou): dá para pedir avaliação pelo link
+  const reviewable = appt.status === "COMPLETED" || (appt.status === "CONFIRMED" && new Date(appt.endsAt) < new Date());
 
   const ctx = {
     clientName: appt.clientName,
@@ -82,6 +84,14 @@ export function AppointmentCard({ appt, showProfessional }: { appt: Appointment;
                       </MenuItem>
                       <MenuItem icon={<Timer />} onClick={act(() => sendWhatsApp(appt.clientPhone, messages.delay(ctx, 15)))}>
                         Avisar atraso
+                      </MenuItem>
+                      <div className="my-1 border-t border-zinc-100" />
+                    </>
+                  )}
+                  {reviewable && (
+                    <>
+                      <MenuItem icon={<Star />} onClick={act(() => sendWhatsApp(appt.clientPhone, messages.review(ctx)))}>
+                        Pedir avaliação
                       </MenuItem>
                       <div className="my-1 border-t border-zinc-100" />
                     </>

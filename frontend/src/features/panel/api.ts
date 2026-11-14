@@ -247,3 +247,39 @@ export const useSetQueueStatus = () =>
 
 export const useToggleQueueOpen = () =>
   useQueueAction(({ id, open }: { id: string; open: boolean }) => api.patch(`/panel/queue/professionals/${id}/open`, { open }));
+
+// ---------- Avaliações ----------
+
+export interface PanelReview {
+  id: string;
+  rating: number;
+  comment: string | null;
+  clientName: string;
+  hidden: boolean;
+  createdAt: string;
+  service: { name: string };
+  professional: { name: string };
+  appointment: { startsAt: string; clientPhone: string };
+}
+
+export interface PanelReviews {
+  average: number | null;
+  count: number;
+  distribution: Record<1 | 2 | 3 | 4 | 5, number>;
+  reviews: PanelReview[];
+}
+
+const reviewsKey = [...panelKeys.all, "reviews"] as const;
+
+export const useReviews = () => useQuery({ queryKey: reviewsKey, queryFn: () => api.get<PanelReviews>("/panel/reviews") });
+
+export function useSetReviewHidden() {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: ({ id, hidden }: { id: string; hidden: boolean }) => api.patch(`/panel/reviews/${id}`, { hidden }),
+    onSuccess: (_d, v) => {
+      qc.invalidateQueries({ queryKey: reviewsKey });
+      toast.success(v.hidden ? "Avaliação ocultada da página" : "Avaliação visível na página");
+    },
+  });
+}

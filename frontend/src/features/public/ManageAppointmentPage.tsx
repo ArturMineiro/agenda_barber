@@ -1,19 +1,20 @@
 import * as React from "react";
 import { Link, useParams } from "react-router-dom";
 import { toast } from "sonner";
-import { CalendarClock, CalendarPlus, CalendarX2, Check, Clock, MapPin, MessageCircle, Scissors, User } from "lucide-react";
+import { CalendarClock, CalendarPlus, CalendarX2, Check, Clock, MapPin, MessageCircle, Pencil, Scissors, User } from "lucide-react";
 import { APP_NAME } from "@navalha/shared";
 import { Button } from "@/components/ui/button";
 import { Dialog } from "@/components/ui/dialog";
 import { Field, Textarea } from "@/components/ui/input";
 import { Avatar, FullPageSpinner, Skeleton } from "@/components/ui/misc";
 import { DateStrip } from "@/components/DateStrip";
+import { StarInput, Stars } from "@/components/Stars";
 import { ApiError, errorMessage } from "@/lib/api";
 import { updateSavedBooking } from "@/lib/my-bookings";
 import { brandVars, readableOn, usePublicTheme } from "@/lib/theme";
 import { addDays, cn, formatDateTime, formatLongDate, formatMoney, formatTime, fromDateKey, toDateKey, whatsappLink } from "@/lib/utils";
 import type { Slot } from "@/types/api";
-import { useCancelMine, useMyAppointment, useRescheduleAvailability, useRescheduleMine, type MyAppointment } from "./api";
+import { useCancelMine, useMyAppointment, useRescheduleAvailability, useRescheduleMine, useReviewMine, type MyAppointment } from "./api";
 
 /** Página do link secreto do agendamento: o cliente vê, remarca ou cancela sem precisar de conta */
 export function ManageAppointmentPage() {
@@ -107,6 +108,8 @@ function Content({ appt, token }: { appt: MyAppointment; token: string }) {
       {appt.status === "COMPLETED" && <Notice>Atendimento concluído. Obrigado pela visita!</Notice>}
       {appt.status === "NO_SHOW" && <Notice>Este horário foi marcado como não comparecido.</Notice>}
 
+      {(appt.canReview || appt.review) && <ReviewBox appt={appt} token={token} />}
+
       <Summary appt={appt} />
 
       {appt.status === "CONFIRMED" && !past && (
@@ -145,6 +148,88 @@ function Content({ appt, token }: { appt: MyAppointment; token: string }) {
 
       <CancelDialog open={canceling} onClose={() => setCanceling(false)} token={token} />
     </>
+  );
+}
+
+/** Depois do atendimento: o cliente dá a nota (e pode editar enquanto estiver no prazo) */
+function ReviewBox({ appt, token }: { appt: MyAppointment; token: string }) {
+  const [editing, setEditing] = React.useState(!appt.review);
+  const [rating, setRating] = React.useState(appt.review?.rating ?? 0);
+  const [comment, setComment] = React.useState(appt.review?.comment ?? "");
+  const save = useReviewMine(token);
+  const first = appt.professional.name.split(" ")[0];
+
+  if (appt.review && !editing) {
+    return (
+      <div className="rounded-2xl bg-white p-5 ring-1 ring-zinc-200">
+        <div className="flex items-start justify-between gap-3">
+          <div>
+            <p className="text-sm font-medium text-zinc-500">Sua avaliação</p>
+            <Stars value={appt.review.rating} className="mt-1 text-xl" />
+          </div>
+          {appt.canReview && (
+            <Button variant="ghost" size="sm" onClick={() => setEditing(true)}>
+              <Pencil /> Editar
+            </Button>
+          )}
+        </div>
+        {appt.review.comment && <p className="mt-3 text-sm whitespace-pre-line text-zinc-700">“{appt.review.comment}”</p>}
+        <p className="mt-3 text-xs text-zinc-500">Obrigado! Sua opinião ajuda a {appt.barbershop.name}.</p>
+      </div>
+    );
+  }
+
+  return (
+    <div className="rounded-2xl bg-white p-5 ring-1 ring-zinc-200 animate-in">
+      <h2 className="font-semibold">Como foi seu {appt.service.name.toLowerCase()}?</h2>
+      <p className="text-sm text-zinc-500">
+        Avalie o atendimento{appt.barbershop.teamType === "TEAM" ? ` com ${first}` : ""}. Leva 10 segundos.
+      </p>
+      <div className="mt-3">
+        <StarInput value={rating} onChange={setRating} />
+      </div>
+      {rating > 0 && (
+        <div className="mt-3 space-y-3 animate-in">
+          <Field label="Quer deixar um comentário? (opcional)">
+            <Textarea
+              rows={3}
+              className="min-h-0"
+              maxLength={500}
+              value={comment}
+              onChange={(e) => setComment(e.target.value)}
+              placeholder={rating >= 4 ? "Ex.: corte ficou top, atendimento rápido" : "Conte o que poderia melhorar"}
+            />
+          </Field>
+          <p className="text-xs text-zinc-500">Aparece na página da barbearia com seu primeiro nome.</p>
+          <div className="flex gap-2">
+            {appt.review && (
+              <Button variant="outline" size="lg" onClick={() => setEditing(false)}>
+                Voltar
+              </Button>
+            )}
+            <Button
+              variant="brand"
+              size="lg"
+              className="flex-1"
+              loading={save.isPending}
+              onClick={() =>
+                save.mutate(
+                  { rating, comment },
+                  {
+                    onSuccess: () => {
+                      toast.success("Avaliação enviada. Valeu!");
+                      setEditing(false);
+                    },
+                  },
+                )
+              }
+            >
+              Enviar avaliação
+            </Button>
+          </div>
+        </div>
+      )}
+    </div>
   );
 }
 

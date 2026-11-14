@@ -6,6 +6,7 @@ import {
   createBookingSchema,
   rescheduleAvailabilityQuerySchema,
   rescheduleSchema,
+  reviewSchema,
 } from "@navalha/shared";
 import { prisma } from "../../lib/prisma";
 import { env } from "../../config/env";
@@ -14,6 +15,7 @@ import { getAvailability } from "../scheduling/availability.service";
 import { createAppointment } from "../scheduling/booking.service";
 import { getPublicQueue } from "../queue/queue.service";
 import { notifyNewBooking } from "../push/push.service";
+import { publicReviewSummary, reviewByClient } from "../reviews/reviews.service";
 import {
   cancelByClient,
   findByToken,
@@ -43,7 +45,7 @@ publicRoutes.get("/config", (_req, res) => {
 /** Página pública: dados de vitrine + serviços + profissionais */
 publicRoutes.get("/barbershops/:slug", async (req, res) => {
   const b = await findActiveBarbershop(String(req.params.slug));
-  const [services, professionals] = await Promise.all([
+  const [services, professionals, reviews] = await Promise.all([
     prisma.service.findMany({
       where: { barbershopId: b.id, active: true, professionals: { some: { professional: { active: true } } } },
       orderBy: [{ position: "asc" }, { createdAt: "asc" }],
@@ -61,6 +63,7 @@ publicRoutes.get("/barbershops/:slug", async (req, res) => {
       orderBy: { createdAt: "asc" },
       select: { id: true, name: true, bio: true, avatarUrl: true, services: { select: { serviceId: true } } },
     }),
+    publicReviewSummary(b.id),
   ]);
 
   res.json({
@@ -83,7 +86,8 @@ publicRoutes.get("/barbershops/:slug", async (req, res) => {
       maxAdvanceDays: b.maxAdvanceDays,
       timezone: b.timezone,
     },
-    services,
+    services: services.map((s) => ({ ...s, rating: reviews.byService[s.id] ?? null })),
+    reviews: { average: reviews.average, count: reviews.count, latest: reviews.latest },
     professionals: professionals.map(({ services: s, ...p }) => ({ ...p, serviceIds: s.map((x) => x.serviceId) })),
   });
 });
@@ -156,4 +160,11 @@ publicRoutes.post("/appointments/:token/reschedule", manageLimiter, async (req, 
   const { startsAt, professionalId } = rescheduleSchema.parse(req.body);
   await rescheduleByClient(String(req.params.token), startsAt, professionalId);
   res.json({ ok: true });
+});
+
+/** Cliente avalia o atendimento (cria ou edita a própria avaliação) */
+publicRoutes.post("/appointments/:token/review", manageLimiter, async (req, res) => {
+  const input = reviewSchema.parse(req.body);
+  const review = await reviewByClient(String(req.params.token), input);
+  res.json({ rating: review.rating, comment: review.comment });
 });

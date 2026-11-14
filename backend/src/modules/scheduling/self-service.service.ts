@@ -1,5 +1,6 @@
 import { DateTime } from "luxon";
 import { Prisma, type Appointment, type Barbershop } from "@prisma/client";
+import { REVIEW_WINDOW_DAYS } from "@navalha/shared";
 import { prisma } from "../../lib/prisma";
 import { AppError, badRequest, conflict, notFound } from "../../lib/errors";
 import { getAvailability } from "./availability.service";
@@ -17,10 +18,24 @@ export async function findByToken(token: string) {
       barbershop: true,
       service: { select: { id: true, name: true, durationMinutes: true } },
       professional: { select: { id: true, name: true, avatarUrl: true } },
+      review: { select: { rating: true, comment: true } },
     },
   });
   if (!appt) throw notFound("Agendamento não encontrado");
   return appt;
+}
+
+/**
+ * Avaliações: o cliente avalia pelo link secreto depois do atendimento.
+ * Vale para concluídos e para confirmados cujo horário já passou (muitos donos não marcam "concluído").
+ */
+export function canReview(appt: Pick<Appointment, "status" | "endsAt">) {
+  if (appt.status !== "COMPLETED" && appt.status !== "CONFIRMED") return false;
+  const end = DateTime.fromJSDate(appt.endsAt);
+  const now = DateTime.now();
+  // concluído pode ser avaliado mesmo se o dono marcou antes do fim do horário
+  if (appt.status === "CONFIRMED" && end > now) return false;
+  return now < end.plus({ days: REVIEW_WINDOW_DAYS });
 }
 
 /** Até quando o cliente pode mexer sozinho no agendamento */
@@ -137,6 +152,8 @@ export function toPublicAppointment(appt: Awaited<ReturnType<typeof findByToken>
     service: appt.service,
     professional: appt.professional,
     canManage: canSelfManage(appt, b),
+    canReview: canReview(appt),
+    review: appt.review,
     manageDeadline: selfServiceDeadline(appt, b).toISO(),
     cancelMinAdvanceMinutes: b.cancelMinAdvanceMinutes,
     barbershop: {

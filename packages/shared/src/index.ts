@@ -7,3 +7,4 @@ export * from "./schemas/catalog";
 export * from "./schemas/booking";
 export * from "./schemas/admin";
 export * from "./schemas/queue";
+export * from "./schemas/review";

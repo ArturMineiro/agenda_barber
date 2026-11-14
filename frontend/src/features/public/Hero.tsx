@@ -1,5 +1,5 @@
 import * as React from "react";
-import { Instagram, MapPin, MessageCircle } from "lucide-react";
+import { Instagram, MapPin, MessageCircle, Star } from "lucide-react";
 import { heroBackground } from "@/lib/theme";
 import { cn, whatsappLink } from "@/lib/utils";
 import type { PublicBarbershop } from "./api";
@@ -12,10 +12,12 @@ interface HeroProps {
   compact: boolean;
   /** selo ao lado do logo (ex.: "Aberto agora") */
   badge?: React.ReactNode;
+  /** nota média: vira um chip que rola até as avaliações */
+  rating?: { average: number | null; count: number };
 }
 
 /** Topo da página pública: capa, logo, nome e contatos em botões */
-export function Hero({ shop, compact, badge }: HeroProps) {
+export function Hero({ shop, compact, badge, rating }: HeroProps) {
   const bg = heroBackground(shop.primaryColor, shop.secondaryColor, shop.coverUrl);
   const location = [shop.address, shop.city].filter(Boolean).join(" · ");
 
@@ -40,6 +42,11 @@ export function Hero({ shop, compact, badge }: HeroProps) {
         {!compact && shop.description && <p className="mt-1.5 text-sm leading-relaxed whitespace-pre-line text-zinc-600">{shop.description}</p>}
 
         <div className="no-scrollbar -mx-4 mt-3 flex gap-2 overflow-x-auto px-4 pb-0.5">
+          {!compact && rating?.count && rating.average !== null ? (
+            <Chip href="#avaliacoes" icon={<Star className="fill-amber-400 text-amber-400" />} external={false}>
+              {rating.average.toLocaleString("pt-BR", { minimumFractionDigits: 1 })} · {rating.count} avaliaç{rating.count === 1 ? "ão" : "ões"}
+            </Chip>
+          ) : null}
           {location && (
             <Chip href={`https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(location)}`} icon={<MapPin />}>
               {location}
@@ -61,12 +68,23 @@ export function Hero({ shop, compact, badge }: HeroProps) {
   );
 }
 
-function Chip({ href, icon, children, className }: { href: string; icon: React.ReactNode; children: React.ReactNode; className?: string }) {
+function Chip({
+  href,
+  icon,
+  children,
+  className,
+  external = true,
+}: {
+  href: string;
+  icon: React.ReactNode;
+  children: React.ReactNode;
+  className?: string;
+  external?: boolean;
+}) {
   return (
     <a
       href={href}
-      target="_blank"
-      rel="noreferrer"
+      {...(external ? { target: "_blank", rel: "noreferrer" } : {})}
       className={cn(
         "inline-flex max-w-[16rem] shrink-0 items-center gap-1.5 rounded-full bg-white px-3 py-1.5 text-xs font-medium text-zinc-700 shadow-xs ring-1 ring-zinc-200 transition hover:ring-zinc-300 active:scale-[0.97] [&_svg]:size-3.5 [&_svg]:shrink-0",
         className,
