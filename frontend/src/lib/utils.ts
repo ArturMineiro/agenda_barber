@@ -83,3 +83,28 @@ const dateTimeFmt = new Intl.DateTimeFormat("pt-BR", {
 export const formatDateTime = (iso: string) => dateTimeFmt.format(new Date(iso));
 
 export const publicUrl = (slug: string) => `${window.location.origin}/${slug}`;
+
+/** Diferença (min) entre o relógio do fuso e UTC num instante */
+function zoneOffsetMinutes(ts: number, timeZone: string) {
+  const parts = new Intl.DateTimeFormat("en-US", {
+    timeZone,
+    hourCycle: "h23",
+    year: "numeric",
+    month: "2-digit",
+    day: "2-digit",
+    hour: "2-digit",
+    minute: "2-digit",
+  }).formatToParts(new Date(ts));
+  const get = (t: string) => Number(parts.find((p) => p.type === t)!.value);
+  return Math.round((Date.UTC(get("year"), get("month") - 1, get("day"), get("hour"), get("minute")) - ts) / 60_000);
+}
+
+/** "2026-11-14" + "15:30" no fuso da barbearia → ISO em UTC */
+export function zonedDateTimeToISO(date: string, time: string, timeZone: string) {
+  const [y, m, d] = date.split("-").map(Number) as [number, number, number];
+  const [h, mi] = time.split(":").map(Number) as [number, number];
+  const wall = Date.UTC(y, m - 1, d, h, mi);
+  let ts = wall - zoneOffsetMinutes(wall, timeZone) * 60_000;
+  ts = wall - zoneOffsetMinutes(ts, timeZone) * 60_000; // corrige perto de troca de horário
+  return new Date(ts).toISOString();
+}

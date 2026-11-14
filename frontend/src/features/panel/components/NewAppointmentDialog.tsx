@@ -4,9 +4,9 @@ import { Dialog } from "@/components/ui/dialog";
 import { Field, Input, Select, Textarea } from "@/components/ui/input";
 import { Spinner } from "@/components/ui/misc";
 import { DateStrip } from "@/components/DateStrip";
-import { cn, formatDuration, formatMoney, maskPhone } from "@/lib/utils";
+import { cn, formatDuration, formatMoney, maskPhone, zonedDateTimeToISO } from "@/lib/utils";
 import { createBookingSchema } from "@navalha/shared";
-import { useCreateAppointment, usePanelAvailability, useProfessionals, useServices } from "../api";
+import { useBarbershop, useCreateAppointment, usePanelAvailability, useProfessionals, useServices } from "../api";
 
 interface Props {
   open: boolean;
@@ -18,12 +18,16 @@ interface Props {
 export function NewAppointmentDialog({ open, onClose, initialDate }: Props) {
   const { data: services } = useServices();
   const { data: pros } = useProfessionals();
+  const { data: shop } = useBarbershop();
   const create = useCreateAppointment();
 
   const [serviceId, setServiceId] = React.useState("");
   const [professionalId, setProfessionalId] = React.useState("");
   const [date, setDate] = React.useState(initialDate);
   const [slot, setSlot] = React.useState<{ startsAt: string; pro: string } | null>(null);
+  // "outro horário": o barbeiro encaixa em qualquer hora, fora da grade/expediente
+  const [freeTime, setFreeTime] = React.useState(false);
+  const [customTime, setCustomTime] = React.useState("");
   const [name, setName] = React.useState("");
   const [phone, setPhone] = React.useState("");
   const [notes, setNotes] = React.useState("");
@@ -33,6 +37,8 @@ export function NewAppointmentDialog({ open, onClose, initialDate }: Props) {
     if (open) {
       setDate(initialDate);
       setSlot(null);
+      setFreeTime(false);
+      setCustomTime("");
       setErrors({});
     }
   }, [open, initialDate]);
@@ -45,11 +51,19 @@ export function NewAppointmentDialog({ open, onClose, initialDate }: Props) {
     date,
   });
 
+  // no horário livre não há slot para escolher o profissional: usa o selecionado (ou o único)
+  const freePro = professionalId || (eligiblePros.length === 1 ? eligiblePros[0]!.id : "");
+
   const submit = () => {
+    const startsAt = freeTime
+      ? customTime && shop
+        ? zonedDateTimeToISO(date, customTime, shop.timezone)
+        : ""
+      : (slot?.startsAt ?? "");
     const parsed = createBookingSchema.safeParse({
       serviceId,
-      professionalId: slot?.pro ?? "",
-      startsAt: slot?.startsAt ?? "",
+      professionalId: freeTime ? freePro : (slot?.pro ?? ""),
+      startsAt,
       clientName: name,
       clientPhone: phone,
       notes,
@@ -57,7 +71,8 @@ export function NewAppointmentDialog({ open, onClose, initialDate }: Props) {
     if (!parsed.success) {
       const errs: Record<string, string> = {};
       for (const i of parsed.error.issues) errs[String(i.path[0])] ??= i.message;
-      if (!slot) errs.startsAt = "Escolha um horário";
+      if (!startsAt) errs.startsAt = freeTime ? "Informe a hora" : "Escolha um horário";
+      if (freeTime && !freePro) errs.professionalId = "Escolha o profissional";
       return setErrors(errs);
     }
     create.mutate(parsed.data, {
@@ -66,6 +81,7 @@ export function NewAppointmentDialog({ open, onClose, initialDate }: Props) {
         setPhone("");
         setNotes("");
         setSlot(null);
+        setCustomTime("");
         onClose();
       },
     });
@@ -76,7 +92,7 @@ export function NewAppointmentDialog({ open, onClose, initialDate }: Props) {
       open={open}
       onClose={onClose}
       title="Novo agendamento"
-      description="Para clientes que ligaram ou chegaram sem agendar."
+      description="Para clientes que ligaram, mandaram mensagem ou chegaram sem agendar."
       footer={
         <>
           <Button variant="outline" onClick={onClose} className="flex-1 sm:flex-none">
@@ -107,7 +123,7 @@ export function NewAppointmentDialog({ open, onClose, initialDate }: Props) {
         </Field>
 
         {eligiblePros.length > 1 && (
-          <Field label="Profissional">
+          <Field label="Profissional" error={errors.professionalId}>
             <Select
               value={professionalId}
               onChange={(e) => {
@@ -115,7 +131,7 @@ export function NewAppointmentDialog({ open, onClose, initialDate }: Props) {
                 setSlot(null);
               }}
             >
-              <option value="">Qualquer um</option>
+              <option value="">{freeTime ? "Selecione…" : "Qualquer um"}</option>
               {eligiblePros.map((p) => (
                 <option key={p.id} value={p.id}>
                   {p.name}
@@ -134,7 +150,37 @@ export function NewAppointmentDialog({ open, onClose, initialDate }: Props) {
         />
 
         <Field label="Horário" error={errors.startsAt}>
-          {!serviceId ? (
+          <div className="mb-2 grid grid-cols-2 gap-1 rounded-xl bg-zinc-100 p-1 text-sm font-medium">
+            {[
+              { free: false, label: "Horários livres" },
+              { free: true, label: "Outro horário" },
+            ].map((o) => (
+              <button
+                key={o.label}
+                type="button"
+                onClick={() => {
+                  setFreeTime(o.free);
+                  setSlot(null);
+                  setErrors({});
+                }}
+                className={cn("rounded-lg py-1.5 transition", freeTime === o.free ? "bg-white shadow-sm" : "text-zinc-500")}
+              >
+                {o.label}
+              </button>
+            ))}
+          </div>
+          {freeTime ? (
+            <div className="space-y-1.5">
+              <Input
+                type="time"
+                value={customTime}
+                onChange={(e) => setCustomTime(e.target.value)}
+                aria-invalid={!!errors.startsAt}
+                className="w-40 tabular-nums"
+              />
+              <p className="text-xs text-zinc-500">Qualquer hora, mesmo fora do expediente. Só não pode bater com outro cliente.</p>
+            </div>
+          ) : !serviceId ? (
             <p className="text-sm text-zinc-500">Escolha o serviço para ver os horários livres.</p>
           ) : isFetching ? (
             <Spinner />
