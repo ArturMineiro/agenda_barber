@@ -18,6 +18,8 @@ export interface User {
   email: string;
   phone: string | null;
   role: Role;
+  /** entrou com senha temporária: precisa criar a própria */
+  mustChangePassword: boolean;
 }
 
 export interface Plan {

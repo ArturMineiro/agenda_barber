@@ -5,13 +5,24 @@ import { Button } from "@/components/ui/button";
 import { Dialog } from "@/components/ui/dialog";
 import { Field, Input } from "@/components/ui/input";
 import { ApiError, errorMessage } from "@/lib/api";
-import { useChangePassword } from "./api";
+import { meKey, useChangePassword } from "./api";
+import { useQueryClient } from "@tanstack/react-query";
+import type { User } from "@/types/api";
 
 const EMPTY = { currentPassword: "", newPassword: "", confirm: "" };
 
-/** Troca de senha de quem está logado (dono da barbearia ou admin) */
-export function ChangePasswordDialog({ open, onClose }: { open: boolean; onClose: () => void }) {
+interface Props {
+  open: boolean;
+  onClose: () => void;
+  /** entrou com senha temporária: não dá para fechar sem criar a própria (só sair) */
+  forced?: boolean;
+  onLogout?: () => void;
+}
+
+/** Troca de senha de quem está logado (dono da barbearia, barbeiro ou admin) */
+export function ChangePasswordDialog({ open, onClose, forced, onLogout }: Props) {
   const change = useChangePassword();
+  const qc = useQueryClient();
   const [form, setForm] = React.useState(EMPTY);
   const [errors, setErrors] = React.useState<Record<string, string>>({});
 
@@ -33,7 +44,8 @@ export function ChangePasswordDialog({ open, onClose }: { open: boolean; onClose
 
     change.mutate(parsed.data, {
       onSuccess: () => {
-        toast.success("Senha alterada");
+        qc.setQueryData<User | null>(meKey, (u) => (u ? { ...u, mustChangePassword: false } : u));
+        toast.success(forced ? "Senha criada. Use ela nos próximos acessos." : "Senha alterada. Os outros aparelhos vão pedir para entrar de novo.");
         onClose();
       },
       onError: (err) => {
@@ -48,13 +60,20 @@ export function ChangePasswordDialog({ open, onClose }: { open: boolean; onClose
   return (
     <Dialog
       open={open}
-      onClose={onClose}
-      title="Alterar senha"
+      onClose={forced ? () => {} : onClose}
+      title={forced ? "Crie sua senha" : "Alterar senha"}
+      description={forced ? "Você entrou com uma senha temporária. Escolha uma senha só sua para continuar." : undefined}
       footer={
         <>
-          <Button variant="outline" onClick={onClose} className="flex-1 sm:flex-none">
-            Cancelar
-          </Button>
+          {forced ? (
+            <Button variant="outline" onClick={onLogout} className="flex-1 sm:flex-none">
+              Sair
+            </Button>
+          ) : (
+            <Button variant="outline" onClick={onClose} className="flex-1 sm:flex-none">
+              Cancelar
+            </Button>
+          )}
           <Button onClick={() => submit()} loading={change.isPending} className="flex-1 sm:flex-none">
             Salvar senha
           </Button>
@@ -62,7 +81,7 @@ export function ChangePasswordDialog({ open, onClose }: { open: boolean; onClose
       }
     >
       <form onSubmit={submit} className="space-y-4">
-        <Field label="Senha atual" error={errors.currentPassword}>
+        <Field label={forced ? "Senha temporária" : "Senha atual"} error={errors.currentPassword}>
           <Input type="password" autoComplete="current-password" value={form.currentPassword} onChange={set("currentPassword")} aria-invalid={!!errors.currentPassword} />
         </Field>
         <Field label="Nova senha" error={errors.newPassword} hint="Mínimo de 8 caracteres">

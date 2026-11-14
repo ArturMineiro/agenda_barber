@@ -1,7 +1,7 @@
 import { Router } from "express";
 import rateLimit from "express-rate-limit";
 import { changePasswordSchema, loginSchema, registerOwnerSchema, slugSchema } from "@navalha/shared";
-import { clearAuthCookie, setAuthCookie, signToken } from "../../lib/auth";
+import { clearAuthCookie, startSession } from "../../lib/auth";
 import { requireAuth } from "../../middlewares/auth";
 import { changePassword, isSlugAvailable, login, registerOwner } from "./auth.service";
 
@@ -23,14 +23,14 @@ const loginLimiter = rateLimit({
 authRoutes.post("/register", registerLimiter, async (req, res) => {
   const input = registerOwnerSchema.parse(req.body);
   const user = await registerOwner(input);
-  setAuthCookie(res, signToken({ sub: user.id, role: user.role }));
+  startSession(res, user);
   res.status(201).json({ user });
 });
 
 authRoutes.post("/login", loginLimiter, async (req, res) => {
   const input = loginSchema.parse(req.body);
-  const user = await login(input);
-  setAuthCookie(res, signToken({ sub: user.id, role: user.role }));
+  const { tokenVersion, ...user } = await login(input);
+  startSession(res, { ...user, tokenVersion });
   res.json({ user });
 });
 
@@ -46,7 +46,9 @@ authRoutes.get("/me", requireAuth, (req, res) => {
 /** Troca a senha de quem está logado. Mesmo limite do login: protege contra adivinhar a senha atual. */
 authRoutes.post("/password", requireAuth, loginLimiter, async (req, res) => {
   const input = changePasswordSchema.parse(req.body);
-  await changePassword(req.user!.id, input);
+  const updated = await changePassword(req.user!.id, input);
+  // este aparelho continua logado (com a versão nova); os outros saem
+  startSession(res, updated);
   res.status(204).end();
 });
 

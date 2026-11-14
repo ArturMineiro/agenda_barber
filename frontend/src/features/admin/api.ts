@@ -86,6 +86,14 @@ export const useMarkPaid = () =>
 
 export const useCancelPayment = () => useAdminAction((id: string) => api.post(`/admin/payments/${id}/cancel`), "Cobrança abonada");
 
+/** Senha temporária para o dono que esqueceu a dele (mostrada uma vez para o admin enviar) */
+export function useResetOwnerPassword() {
+  return useMutation({
+    mutationFn: (id: string) =>
+      api.post<{ tempPassword: string; owner: { name: string; email: string; phone: string | null } }>(`/admin/barbershops/${id}/owner-password`),
+  });
+}
+
 export const useSyncBilling = () => useAdminAction(() => api.post("/admin/billing/sync"), "Cobranças sincronizadas");
 
 export const useSavePlan = () =>

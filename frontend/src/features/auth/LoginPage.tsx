@@ -1,10 +1,11 @@
 import { Link, useLocation, useNavigate } from "react-router-dom";
-import { useForm } from "react-hook-form";
+import { useForm, useWatch } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { loginSchema } from "@navalha/shared";
 import { Button } from "@/components/ui/button";
 import { Field, Input } from "@/components/ui/input";
 import { errorMessage } from "@/lib/api";
+import { SupportLink } from "@/lib/support";
 import { AuthLayout } from "./AuthLayout";
 import { homeFor, useLogin } from "./api";
 
@@ -16,6 +17,7 @@ export function LoginPage() {
 
   const form = useForm({ resolver: zodResolver(loginSchema), defaultValues: { email: "", password: "" } });
   const { errors } = form.formState;
+  const email = useWatch({ control: form.control, name: "email" });
 
   const onSubmit = form.handleSubmit((values) =>
     login.mutate(values, {
@@ -48,6 +50,15 @@ export function LoginPage() {
         <Button type="submit" size="lg" className="w-full" loading={login.isPending}>
           Entrar
         </Button>
+        {/* sem e-mail automático: o suporte gera uma senha temporária e manda pelo WhatsApp */}
+        <div className="text-center text-sm">
+          <SupportLink
+            className="font-medium text-zinc-600 no-underline hover:text-zinc-900"
+            message={`Olá! Esqueci minha senha do Navalha.${email ? ` Meu e-mail de acesso é ${email}.` : ""}`}
+          >
+            Esqueci minha senha
+          </SupportLink>
+        </div>
       </form>
     </AuthLayout>
   );

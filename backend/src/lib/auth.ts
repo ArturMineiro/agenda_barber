@@ -8,6 +8,8 @@ export const AUTH_COOKIE = "navalha_token";
 export interface TokenPayload {
   sub: string;
   role: Role;
+  /** tokenVersion do usuário quando o login foi feito: trocou a senha, o token antigo para de valer */
+  ver?: number;
 }
 
 export function signToken(payload: TokenPayload) {
@@ -31,6 +33,11 @@ export function setAuthCookie(res: Response, token: string) {
     maxAge: 7 * 24 * 60 * 60 * 1000,
     path: "/",
   });
+}
+
+/** Abre a sessão (cookie) para o usuário */
+export function startSession(res: Response, user: { id: string; role: Role; tokenVersion?: number }) {
+  setAuthCookie(res, signToken({ sub: user.id, role: user.role, ver: user.tokenVersion ?? 0 }));
 }
 
 export function clearAuthCookie(res: Response) {

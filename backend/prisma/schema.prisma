@@ -77,6 +77,10 @@ model User {
   phone        String?
   passwordHash String
   role         Role
+  /// sobe a cada troca de senha: sessões abertas com a senha antiga deixam de valer
+  tokenVersion Int      @default(0)
+  /// entrou com senha temporária (gerada pelo admin ou pelo dono): precisa criar a própria
+  mustChangePassword Boolean @default(false)
   createdAt    DateTime @default(now())
   updatedAt    DateTime @updatedAt
 

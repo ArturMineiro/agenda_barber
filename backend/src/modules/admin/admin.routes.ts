@@ -15,6 +15,7 @@ import { badRequest, notFound } from "../../lib/errors";
 import { DEFAULT_TZ } from "../../lib/time";
 import { requireAuth, requireRole } from "../../middlewares/auth";
 import { refreshSubscriptionStanding, syncBilling } from "../billing/billing.service";
+import { setTemporaryPassword } from "../auth/auth.service";
 
 export const adminRoutes = Router();
 adminRoutes.use(requireAuth, requireRole("SUPER_ADMIN"));
@@ -186,6 +187,14 @@ adminRoutes.post("/barbershops/:id/reactivate", async (req, res) => {
     data: { status: "ACTIVE", statusReason: null },
   });
   res.json({ ok: true });
+});
+
+/** "Esqueci minha senha": o admin gera uma senha temporária e manda para o dono pelo WhatsApp */
+adminRoutes.post("/barbershops/:id/owner-password", async (req, res) => {
+  const barbershop = await prisma.barbershop.findUnique({ where: { id: req.params.id }, select: { owner: ownerSelect } });
+  if (!barbershop) throw notFound("Barbearia não encontrada");
+  const tempPassword = await setTemporaryPassword(barbershop.owner.id);
+  res.json({ tempPassword, owner: barbershop.owner });
 });
 
 adminRoutes.put("/barbershops/:id/subscription", async (req, res) => {

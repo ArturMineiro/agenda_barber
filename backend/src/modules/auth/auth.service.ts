@@ -1,3 +1,4 @@
+import { randomInt } from "node:crypto";
 import bcrypt from "bcryptjs";
 import { RESERVED_SLUGS, type changePasswordSchema, type registerOwnerSchema, type loginSchema } from "@navalha/shared";
 import type { z } from "zod";
@@ -79,7 +80,29 @@ export async function changePassword(userId: string, input: z.output<typeof chan
   if (!user || !(await bcrypt.compare(input.currentPassword, user.passwordHash))) {
     throw badRequest("Senha atual incorreta", "WRONG_PASSWORD");
   }
-  await prisma.user.update({ where: { id: userId }, data: { passwordHash: await bcrypt.hash(input.newPassword, 10) } });
+  // sobe a versão: os outros aparelhos logados com a senha antiga saem
+  return prisma.user.update({
+    where: { id: userId },
+    data: { passwordHash: await bcrypt.hash(input.newPassword, 10), mustChangePassword: false, tokenVersion: { increment: 1 } },
+    select: { id: true, role: true, tokenVersion: true },
+  });
+}
+
+/** Sem letras/números que se confundem (l, 1, o, 0, i): fácil de ditar ou digitar */
+const TEMP_ALPHABET = "abcdefghjkmnpqrstuvwxyz23456789";
+const tempChunk = () => Array.from({ length: 4 }, () => TEMP_ALPHABET[randomInt(TEMP_ALPHABET.length)]).join("");
+
+/**
+ * "Esqueci minha senha" sem e-mail: gera uma senha temporária (ex.: k7mp-x3qa),
+ * derruba as sessões abertas e pede para criar uma nova no próximo acesso.
+ */
+export async function setTemporaryPassword(userId: string) {
+  const tempPassword = `${tempChunk()}-${tempChunk()}`;
+  await prisma.user.update({
+    where: { id: userId },
+    data: { passwordHash: await bcrypt.hash(tempPassword, 10), mustChangePassword: true, tokenVersion: { increment: 1 } },
+  });
+  return tempPassword;
 }
 
 export async function login(input: Login) {

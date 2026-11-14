@@ -1,4 +1,4 @@
-import { MutationCache, QueryClient } from "@tanstack/react-query";
+import { MutationCache, QueryCache, QueryClient } from "@tanstack/react-query";
 import { toast } from "sonner";
 import { ApiError } from "./api";
 
@@ -10,6 +10,16 @@ export const queryClient = new QueryClient({
       retry: (count, err) => !(err instanceof ApiError && err.status < 500) && count < 2,
     },
   },
+  // sessão encerrada (senha trocada em outro aparelho, token expirado): volta para o login
+  queryCache: new QueryCache({
+    onError: (err) => {
+      if (!(err instanceof ApiError) || err.status !== 401) return;
+      if (queryClient.getQueryData(["auth", "me"])) {
+        toast.error(err.message, { id: "session-ended" });
+        queryClient.setQueryData(["auth", "me"], null);
+      }
+    },
+  }),
   // erro de mutation vira toast automaticamente (a menos que a mutation trate o próprio erro)
   mutationCache: new MutationCache({
     onError: (err, _vars, _ctx, mutation) => {

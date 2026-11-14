@@ -10,6 +10,7 @@ export const publicUserSelect = {
   email: true,
   phone: true,
   role: true,
+  mustChangePassword: true,
   createdAt: true,
   updatedAt: true,
 } as const;
@@ -22,10 +23,13 @@ export async function requireAuth(req: Request, _res: Response, next: NextFuncti
   const payload = verifyToken(token);
   if (!payload) throw unauthorized("Sessão expirada, entre novamente");
 
-  const user = await prisma.user.findUnique({ where: { id: payload.sub }, select: publicUserSelect });
+  const user = await prisma.user.findUnique({ where: { id: payload.sub }, select: { ...publicUserSelect, tokenVersion: true } });
   if (!user) throw unauthorized();
+  // a senha mudou depois deste login (troca ou senha temporária): pede para entrar de novo
+  const { tokenVersion, ...publicUser } = user;
+  if ((payload.ver ?? 0) !== tokenVersion) throw unauthorized("Sua senha foi alterada. Entre novamente.");
 
-  req.user = user;
+  req.user = publicUser;
   next();
 }
 

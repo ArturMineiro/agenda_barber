@@ -173,7 +173,12 @@ export function AppShell({ nav, header, banner }: AppShellProps) {
         </div>
       </Dialog>
 
-      <ChangePasswordDialog open={passwordOpen} onClose={() => setPasswordOpen(false)} />
+      <ChangePasswordDialog
+        open={passwordOpen || !!user?.mustChangePassword}
+        forced={!!user?.mustChangePassword}
+        onClose={() => setPasswordOpen(false)}
+        onLogout={handleLogout}
+      />
     </div>
   );
 }

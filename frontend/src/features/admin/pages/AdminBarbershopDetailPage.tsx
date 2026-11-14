@@ -1,6 +1,7 @@
 import * as React from "react";
 import { Link, useParams } from "react-router-dom";
-import { ArrowLeft, ExternalLink, Mail, MessageCircle, Pause, Play, Receipt } from "lucide-react";
+import { ArrowLeft, Copy, ExternalLink, KeyRound, Mail, MessageCircle, Pause, Play, Receipt } from "lucide-react";
+import { toast } from "sonner";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Dialog } from "@/components/ui/dialog";
@@ -8,7 +9,7 @@ import { Field, Input, Select } from "@/components/ui/input";
 import { FullPageSpinner } from "@/components/ui/misc";
 import { formatDateOnly, formatMoney, formatPhone, publicUrl, whatsappLink } from "@/lib/utils";
 import type { AdminBarbershop, Plan } from "@/types/api";
-import { useAdminBarbershop, useApprove, useChangeSubscription, usePlans, useReactivate, useReject, useSuspend } from "../api";
+import { useAdminBarbershop, useApprove, useChangeSubscription, usePlans, useReactivate, useReject, useResetOwnerPassword, useSuspend } from "../api";
 import { PaymentRow } from "../components/PaymentRow";
 import { ShopStatusBadge, SubStatusBadge } from "../components/status";
 
@@ -127,6 +128,7 @@ export function AdminBarbershopDetailPage() {
                   <MessageCircle className="size-4" /> {formatPhone(shop.owner.phone)}
                 </a>
               )}
+              <ResetOwnerPassword shop={shop} />
             </CardContent>
           </Card>
           <Card>
@@ -142,6 +144,69 @@ export function AdminBarbershopDetailPage() {
         </div>
       </div>
     </div>
+  );
+}
+
+/** "Esqueci minha senha": gera uma senha temporária e o admin manda pelo WhatsApp */
+function ResetOwnerPassword({ shop }: { shop: AdminBarbershop }) {
+  const reset = useResetOwnerPassword();
+  const [temp, setTemp] = React.useState<string | null>(null);
+  const loginUrl = `${window.location.origin}/entrar`;
+  const message = temp
+    ? `Olá ${shop.owner.name.split(" ")[0]}! Sua senha temporária do Navalha é: *${temp}*
+
+Entre em ${loginUrl} com o e-mail ${shop.owner.email} e crie uma senha nova no primeiro acesso.`
+    : "";
+
+  return (
+    <>
+      <Button
+        size="sm"
+        variant="outline"
+        className="mt-1 w-full"
+        loading={reset.isPending}
+        onClick={() =>
+          confirm(`Gerar uma senha temporária para ${shop.owner.name}? A senha atual para de funcionar e os aparelhos logados saem.`) &&
+          reset.mutate(shop.id, { onSuccess: (r) => setTemp(r.tempPassword) })
+        }
+      >
+        <KeyRound /> Gerar senha temporária
+      </Button>
+      <Dialog
+        open={!!temp}
+        onClose={() => setTemp(null)}
+        title="Senha temporária criada"
+        description="Mostrada só agora. No primeiro acesso o dono cria uma senha nova."
+        footer={
+          <>
+            <Button variant="outline" onClick={() => setTemp(null)} className="flex-1 sm:flex-none">
+              Fechar
+            </Button>
+            {shop.owner.phone && (
+              <a href={whatsappLink(shop.owner.phone, message)} target="_blank" rel="noreferrer" className="flex-1 sm:flex-none">
+                <Button variant="success" className="w-full">
+                  <MessageCircle /> Enviar no WhatsApp
+                </Button>
+              </a>
+            )}
+          </>
+        }
+      >
+        <div className="flex items-center justify-between gap-3 rounded-xl bg-zinc-100 px-4 py-3">
+          <span className="font-mono text-2xl font-semibold tracking-wider">{temp}</span>
+          <Button
+            size="sm"
+            variant="ghost"
+            onClick={async () => {
+              await navigator.clipboard.writeText(message);
+              toast.success("Mensagem copiada");
+            }}
+          >
+            <Copy /> Copiar
+          </Button>
+        </div>
+      </Dialog>
+    </>
   );
 }
 
