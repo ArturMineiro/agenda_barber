@@ -48,12 +48,12 @@ export const TIMEZONE_IDS = [
 export type TimezoneId = (typeof TIMEZONE_IDS)[number];
 
 export const TIMEZONE_LABELS: Record<TimezoneId, string> = {
-  "America/Sao_Paulo": "Horário de Brasília (SP, RJ, MG, ES, Sul, Nordeste, GO, DF, TO, PA, AP)",
-  "America/Manaus": "Amazonas (1h a menos)",
-  "America/Cuiaba": "Mato Grosso (1h a menos)",
-  "America/Campo_Grande": "Mato Grosso do Sul (1h a menos)",
-  "America/Porto_Velho": "Rondônia (1h a menos)",
-  "America/Boa_Vista": "Roraima (1h a menos)",
-  "America/Rio_Branco": "Acre (2h a menos)",
-  "America/Noronha": "Fernando de Noronha (1h a mais)",
+  "America/Sao_Paulo": "Horário de Brasília",
+  "America/Manaus": "Amazonas (−1h)",
+  "America/Cuiaba": "Mato Grosso (−1h)",
+  "America/Campo_Grande": "Mato Grosso do Sul (−1h)",
+  "America/Porto_Velho": "Rondônia (−1h)",
+  "America/Boa_Vista": "Roraima (−1h)",
+  "America/Rio_Branco": "Acre (−2h)",
+  "America/Noronha": "Fernando de Noronha (+1h)",
 };

@@ -260,7 +260,7 @@ export function SettingsPage() {
               <Field
                 label="Fuso horário"
                 error={errors.timezone?.message}
-                hint="Os horários da agenda e da página seguem este fuso, mesmo que o cliente esteja em outro estado."
+                hint="Brasília vale para SP, RJ, MG, ES, Sul, Nordeste, GO, DF, TO, PA e AP. A agenda e a página seguem este fuso, mesmo que o cliente esteja em outro estado."
                 className="sm:max-w-md"
               >
                 <Select {...form.register("timezone")}>

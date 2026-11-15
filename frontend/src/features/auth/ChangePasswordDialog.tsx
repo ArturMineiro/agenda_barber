@@ -60,7 +60,8 @@ export function ChangePasswordDialog({ open, onClose, forced, onLogout }: Props)
   return (
     <Dialog
       open={open}
-      onClose={forced ? () => {} : onClose}
+      onClose={onClose}
+      dismissible={!forced}
       title={forced ? "Crie sua senha" : "Alterar senha"}
       description={forced ? "Você entrou com uma senha temporária. Escolha uma senha só sua para continuar." : undefined}
       footer={

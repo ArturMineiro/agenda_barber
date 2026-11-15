@@ -11,16 +11,18 @@ interface DialogProps {
   children: React.ReactNode;
   footer?: React.ReactNode;
   className?: string;
+  /** false: sem X, sem fechar no fundo nem no Esc (a pessoa precisa usar os botões) */
+  dismissible?: boolean;
 }
 
 /**
  * No celular abre como "bottom sheet" (de baixo pra cima, ocupa a largura);
  * no desktop vira um modal centralizado.
  */
-export function Dialog({ open, onClose, title, description, children, footer, className }: DialogProps) {
+export function Dialog({ open, onClose, title, description, children, footer, className, dismissible = true }: DialogProps) {
   React.useEffect(() => {
     if (!open) return;
-    const onKey = (e: KeyboardEvent) => e.key === "Escape" && onClose();
+    const onKey = (e: KeyboardEvent) => dismissible && e.key === "Escape" && onClose();
     document.addEventListener("keydown", onKey);
     const prev = document.body.style.overflow;
     document.body.style.overflow = "hidden";
@@ -28,13 +30,13 @@ export function Dialog({ open, onClose, title, description, children, footer, cl
       document.removeEventListener("keydown", onKey);
       document.body.style.overflow = prev;
     };
-  }, [open, onClose]);
+  }, [open, onClose, dismissible]);
 
   if (!open) return null;
 
   return createPortal(
     <div className="fixed inset-0 z-50 flex items-end justify-center sm:items-center sm:p-4">
-      <div className="absolute inset-0 bg-zinc-950/40 backdrop-blur-[2px] animate-in" onClick={onClose} />
+      <div className="absolute inset-0 bg-zinc-950/40 backdrop-blur-[2px] animate-in" onClick={dismissible ? onClose : undefined} />
       <div
         role="dialog"
         aria-modal="true"
@@ -50,13 +52,15 @@ export function Dialog({ open, onClose, title, description, children, footer, cl
               {title && <h2 className="text-lg font-semibold text-zinc-900">{title}</h2>}
               {description && <p className="mt-0.5 text-sm text-zinc-500">{description}</p>}
             </div>
-            <button
-              onClick={onClose}
-              className="-mr-1.5 rounded-lg p-1.5 text-zinc-400 hover:bg-zinc-100 hover:text-zinc-700"
-              aria-label="Fechar"
-            >
-              <X className="size-5" />
-            </button>
+            {dismissible && (
+              <button
+                onClick={onClose}
+                className="-mr-1.5 rounded-lg p-1.5 text-zinc-400 hover:bg-zinc-100 hover:text-zinc-700"
+                aria-label="Fechar"
+              >
+                <X className="size-5" />
+              </button>
+            )}
           </div>
         )}
         <div className="overflow-y-auto px-5 py-4">{children}</div>
