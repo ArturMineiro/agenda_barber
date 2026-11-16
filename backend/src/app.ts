@@ -14,6 +14,7 @@ import { pushRoutes } from "./modules/push/push.routes";
 import { servicePhotoRoutes } from "./modules/catalog/service-photos.routes";
 import { UPLOAD_DIR } from "./modules/uploads/uploads.service";
 import { errorHandler, notFoundHandler } from "./middlewares/error-handler";
+import { auditTrail } from "./lib/audit";
 
 export function createApp() {
   const app = express();
@@ -35,6 +36,8 @@ export function createApp() {
   );
 
   app.get("/api/health", (_req, res) => res.json({ ok: true }));
+  // log de atividades: toda alteração que deu certo (e logins com senha errada)
+  app.use("/api", auditTrail);
   app.use("/api/auth", authRoutes);
   app.use("/api/admin", adminRoutes); // super admin da plataforma
   app.use("/api/panel/uploads", uploadRoutes); // imagens (logo, capa, fotos)

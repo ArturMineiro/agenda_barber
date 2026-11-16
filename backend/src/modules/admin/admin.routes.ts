@@ -273,3 +273,120 @@ adminRoutes.put("/plans/:id", async (req, res) => {
   const input = planSchema.parse(req.body);
   res.json(await prisma.plan.update({ where: { id: req.params.id }, data: input }));
 });
+
+// ---------- Log de atividades ----------
+
+const activityQuerySchema = z.object({
+  /** paginação: traz o que veio antes desta data */
+  before: z.iso.datetime({ offset: true }).optional(),
+  /** OWNER | BARBER | SUPER_ADMIN | CLIENT */
+  role: z.string().trim().optional(),
+  /** só logins (inclusive os que falharam) */
+  kind: z.enum(["all", "auth", "admin", "changes", "clients"]).default("all"),
+  q: z.string().trim().optional(),
+  barbershopId: z.string().optional(),
+});
+
+const KIND_FILTER = {
+  all: {},
+  auth: { action: { startsWith: "auth." } },
+  admin: { actorRole: "SUPER_ADMIN" },
+  changes: { action: { startsWith: "panel." } },
+  clients: { actorRole: "CLIENT" },
+} as const;
+
+async function listActivity(query: z.infer<typeof activityQuerySchema>) {
+  const PAGE = 50;
+  const rows = await prisma.auditLog.findMany({
+    where: {
+      ...(query.barbershopId ? { barbershopId: query.barbershopId } : {}),
+      ...(query.before ? { createdAt: { lt: new Date(query.before) } } : {}),
+      ...(query.role ? { actorRole: query.role } : {}),
+      ...KIND_FILTER[query.kind],
+      ...(query.q
+        ? {
+            OR: [
+              { summary: { contains: query.q, mode: "insensitive" as const } },
+              { actorName: { contains: query.q, mode: "insensitive" as const } },
+              { ip: { contains: query.q } },
+            ],
+          }
+        : {}),
+    },
+    orderBy: { createdAt: "desc" },
+    take: PAGE + 1,
+    include: { barbershop: { select: { id: true, name: true } } },
+  });
+  const items = rows.slice(0, PAGE);
+  return { items, nextBefore: rows.length > PAGE ? items.at(-1)!.createdAt.toISOString() : null };
+}
+
+/** Tudo que aconteceu na plataforma (ou numa barbearia, com ?barbershopId=) */
+adminRoutes.get("/activity", async (req, res) => {
+  res.json(await listActivity(activityQuerySchema.parse(req.query)));
+});
+
+adminRoutes.get("/barbershops/:id/activity", async (req, res) => {
+  res.json(await listActivity(activityQuerySchema.parse({ ...req.query, barbershopId: req.params.id })));
+});
+
+/** Resumo para o suporte: último acesso de cada pessoa, movimento recente e equipe com login */
+adminRoutes.get("/barbershops/:id/insights", async (req, res) => {
+  const shop = await prisma.barbershop.findUnique({ where: { id: req.params.id }, select: { id: true, ownerId: true, createdAt: true } });
+  if (!shop) throw notFound("Barbearia não encontrada");
+  const now = new Date();
+  const since30 = DateTime.now().minus({ days: 30 }).toJSDate();
+  const since7 = DateTime.now().minus({ days: 7 }).toJSDate();
+
+  const [pros, clients, last30, upcoming, reviews, lastActivity, failed7] = await Promise.all([
+    prisma.professional.findMany({
+      where: { barbershopId: shop.id },
+      orderBy: { createdAt: "asc" },
+      select: { id: true, name: true, active: true, user: { select: { id: true, email: true, mustChangePassword: true } } },
+    }),
+    prisma.appointment.groupBy({ by: ["clientPhone"], where: { barbershopId: shop.id } }),
+    prisma.appointment.groupBy({
+      by: ["status"],
+      where: { barbershopId: shop.id, startsAt: { gte: since30, lte: now } },
+      _count: true,
+      _sum: { priceCents: true },
+    }),
+    prisma.appointment.count({ where: { barbershopId: shop.id, startsAt: { gt: now }, status: "CONFIRMED" } }),
+    prisma.review.aggregate({ where: { barbershopId: shop.id }, _avg: { rating: true }, _count: true }),
+    prisma.auditLog.findFirst({ where: { barbershopId: shop.id }, orderBy: { createdAt: "desc" }, select: { createdAt: true, summary: true, actorName: true } }),
+    prisma.auditLog.count({ where: { barbershopId: shop.id, action: "auth.login_failed", createdAt: { gte: since7 } } }),
+  ]);
+
+  // último login de cada pessoa com acesso (dono + barbeiros)
+  const userIds = [shop.ownerId, ...pros.flatMap((p) => (p.user ? [p.user.id] : []))];
+  const logins = await prisma.auditLog.groupBy({
+    by: ["actorId"],
+    where: { actorId: { in: userIds }, action: "auth.login" },
+    _max: { createdAt: true },
+  });
+  const lastLogin = (id: string) => logins.find((l) => l.actorId === id)?._max.createdAt ?? null;
+  const byStatus = (s: string) => last30.find((x) => x.status === s);
+
+  res.json({
+    ownerLastLoginAt: lastLogin(shop.ownerId),
+    failedLogins7d: failed7,
+    lastActivity,
+    clients: clients.length,
+    upcoming,
+    last30Days: {
+      completed: (byStatus("COMPLETED")?._count ?? 0) + (byStatus("CONFIRMED")?._count ?? 0),
+      noShow: byStatus("NO_SHOW")?._count ?? 0,
+      canceled: byStatus("CANCELED")?._count ?? 0,
+      revenueCents: (byStatus("COMPLETED")?._sum.priceCents ?? 0) + (byStatus("CONFIRMED")?._sum.priceCents ?? 0),
+    },
+    reviews: { average: reviews._count ? Math.round((reviews._avg.rating ?? 0) * 10) / 10 : null, count: reviews._count },
+    team: pros.map((p) => ({
+      id: p.id,
+      name: p.name,
+      active: p.active,
+      email: p.user?.email ?? null,
+      pendingPassword: p.user?.mustChangePassword ?? false,
+      lastLoginAt: p.user ? lastLogin(p.user.id) : null,
+    })),
+  });
+});

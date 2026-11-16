@@ -1,9 +1,11 @@
 import { BarChart3, Bell, BellRing, CalendarDays, CalendarOff, Clock, Home, ListOrdered, Scissors, Settings, Star, Users, UserSquare2 } from "lucide-react";
-import { Navigate, useLocation } from "react-router-dom";
+import { Navigate, useLocation, useNavigate } from "react-router-dom";
+import { ShieldCheck } from "lucide-react";
 import { useMe } from "@/features/auth/api";
 import { AppShell, type NavItem } from "@/components/layout/AppShell";
 import { FullPageSpinner } from "@/components/ui/misc";
 import { SupportLink } from "@/lib/support";
+import { exitAdminMode, getAdminMode } from "@/lib/admin-mode";
 import { formatDateOnly, formatMoney, setDisplayTimeZone } from "@/lib/utils";
 import type { Barbershop } from "@/types/api";
 import { useBarbershop } from "./api";
@@ -36,6 +38,14 @@ const BARBER_NAV: NavItem[] = [
 const OWNER_ONLY = ["/painel/equipe", "/painel/servicos", "/painel/clientes", "/painel/avaliacoes", "/painel/configuracoes"];
 
 export function PanelLayout() {
+  const { data: user } = useMe();
+  const adminMode = user?.role === "SUPER_ADMIN" ? getAdminMode() : null;
+  // admin só entra no painel escolhendo a barbearia no admin
+  if (user?.role === "SUPER_ADMIN" && !adminMode) return <Navigate to="/admin/barbearias" replace />;
+  return <PanelShell adminMode={adminMode} />;
+}
+
+function PanelShell({ adminMode }: { adminMode: { id: string; name: string } | null }) {
   const { data: shop, isLoading } = useBarbershop();
   const { data: user } = useMe();
   const location = useLocation();
@@ -48,7 +58,11 @@ export function PanelLayout() {
 
   // fila é presencial: não há agendamento pelo link para avisar nem para avaliar
   const queueOnly = ["/painel/notificacoes", "/painel/avaliacoes", "/painel/lembretes"];
-  const nav = (barber ? BARBER_NAV : NAV).filter((n) => !(queueOnly.includes(n.to) && shop.bookingMode === "QUEUE")).map((n) => {
+  const nav = (barber ? BARBER_NAV : NAV)
+    .filter((n) => !(queueOnly.includes(n.to) && shop.bookingMode === "QUEUE"))
+    // notificações no celular são do aparelho do dono, não do admin
+    .filter((n) => !(adminMode && n.to === "/painel/notificacoes"))
+    .map((n) => {
     // ordem de chegada: a agenda vira a fila
     if (n.to === "/painel/agenda" && shop.bookingMode === "QUEUE") return { ...n, to: "/painel/fila", label: "Fila", icon: ListOrdered };
     if (n.to === "/painel/equipe" && shop.teamType === "SOLO") return { ...n, label: "Horários", icon: Clock };
@@ -58,7 +72,12 @@ export function PanelLayout() {
   return (
     <AppShell
       nav={nav}
-      banner={barber ? null : <StatusBanner shop={shop} />}
+      banner={
+        <>
+          {adminMode && <AdminModeBanner shop={shop} />}
+          {barber ? null : <StatusBanner shop={shop} />}
+        </>
+      }
       header={
         <div className="rounded-xl bg-zinc-50 px-3 py-2.5 ring-1 ring-zinc-200/70">
           <p className="text-[11px] font-medium tracking-wide text-zinc-500 uppercase">{barber ? "Seu painel na" : "Barbearia"}</p>
@@ -66,6 +85,30 @@ export function PanelLayout() {
         </div>
       }
     />
+  );
+}
+
+/** Faixa fixa enquanto o admin da plataforma mexe no painel de uma barbearia */
+function AdminModeBanner({ shop }: { shop: Barbershop }) {
+  const navigate = useNavigate();
+  return (
+    <div className="flex flex-wrap items-center justify-center gap-x-3 gap-y-1 border-b border-violet-300 bg-violet-600 px-4 py-2 text-center text-sm text-white sm:px-6">
+      <span className="inline-flex items-center gap-1.5">
+        <ShieldCheck className="size-4" />
+        <span>
+          <strong>Modo administrador</strong> · gerenciando <strong>{shop.name}</strong>. Tudo que você fizer fica no log.
+        </span>
+      </span>
+      <button
+        onClick={() => {
+          exitAdminMode();
+          navigate(`/admin/barbearias/${shop.id}`);
+        }}
+        className="rounded-lg bg-white/15 px-2.5 py-1 text-xs font-semibold ring-1 ring-white/30 hover:bg-white/25"
+      >
+        Voltar ao admin
+      </button>
+    </div>
   );
 }
 

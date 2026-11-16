@@ -6,7 +6,7 @@ import { loadOwnerBarbershop, requireAuth, requireRole } from "../../middlewares
 import { IMAGE_KINDS, saveImage } from "./uploads.service";
 
 export const uploadRoutes = Router();
-uploadRoutes.use(requireAuth, requireRole("OWNER"), loadOwnerBarbershop);
+uploadRoutes.use(requireAuth, requireRole("OWNER", "SUPER_ADMIN"), loadOwnerBarbershop);
 
 const upload = multer({
   storage: multer.memoryStorage(),

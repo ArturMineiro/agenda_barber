@@ -1,15 +1,27 @@
 import * as React from "react";
-import { Link, useParams } from "react-router-dom";
-import { ArrowLeft, ExternalLink, KeyRound, Mail, MessageCircle, Pause, Play, Receipt } from "lucide-react";
+import { Link, useNavigate, useParams } from "react-router-dom";
+import { ArrowLeft, ExternalLink, KeyRound, Mail, MessageCircle, Pause, Play, Receipt, Settings2, ShieldAlert, Star } from "lucide-react";
 import { TempPasswordDialog } from "@/components/TempPasswordDialog";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Dialog } from "@/components/ui/dialog";
 import { Field, Input, Select } from "@/components/ui/input";
 import { FullPageSpinner } from "@/components/ui/misc";
-import { formatDateOnly, formatMoney, formatPhone, publicUrl, whatsappLink } from "@/lib/utils";
+import { formatDateOnly, formatDateTime, formatMoney, formatPhone, publicUrl, whatsappLink } from "@/lib/utils";
+import { enterAdminMode } from "@/lib/admin-mode";
 import type { AdminBarbershop, Plan } from "@/types/api";
-import { useAdminBarbershop, useApprove, useChangeSubscription, usePlans, useReactivate, useReject, useResetOwnerPassword, useSuspend } from "../api";
+import {
+  useAdminBarbershop,
+  useApprove,
+  useBarbershopInsights,
+  useChangeSubscription,
+  usePlans,
+  useReactivate,
+  useReject,
+  useResetOwnerPassword,
+  useSuspend,
+} from "../api";
+import { ActivityList } from "../components/ActivityList";
 import { PaymentRow } from "../components/PaymentRow";
 import { ShopStatusBadge, SubStatusBadge } from "../components/status";
 
@@ -21,6 +33,7 @@ export function AdminBarbershopDetailPage() {
   const { data: shop, isLoading } = useAdminBarbershop(id);
   const suspend = useSuspend();
   const reactivate = useReactivate();
+  const navigate = useNavigate();
 
   if (isLoading || !shop) return <FullPageSpinner />;
   const sub = shop.subscription;
@@ -43,7 +56,16 @@ export function AdminBarbershopDetailPage() {
           </p>
           {shop.statusReason && <p className="mt-1 text-sm text-red-600">Motivo: {shop.statusReason}</p>}
         </div>
-        <div className="flex gap-2">
+        <div className="flex flex-wrap gap-2">
+          <Button
+            size="sm"
+            onClick={() => {
+              enterAdminMode({ id: shop.id, name: shop.name });
+              navigate("/painel");
+            }}
+          >
+            <Settings2 /> Gerenciar painel
+          </Button>
           <a href={publicUrl(shop.slug)} target="_blank" rel="noreferrer">
             <Button variant="outline" size="sm">
               <ExternalLink /> Página
@@ -131,19 +153,116 @@ export function AdminBarbershopDetailPage() {
               <ResetOwnerPassword shop={shop} />
             </CardContent>
           </Card>
-          <Card>
-            <CardHeader>
-              <CardTitle>Uso</CardTitle>
-            </CardHeader>
-            <CardContent className="grid grid-cols-3 gap-3">
-              <Info label="Profissionais" value={shop._count?.professionals ?? 0} />
-              <Info label="Serviços" value={shop._count?.services ?? 0} />
-              <Info label="Agendamentos" value={shop._count?.appointments ?? 0} />
-            </CardContent>
-          </Card>
+          <InsightsCard shop={shop} />
         </div>
       </div>
+
+      <Card>
+        <CardHeader>
+          <div>
+            <CardTitle>Log de atividades</CardTitle>
+            <p className="mt-0.5 text-sm text-zinc-500">Logins, alterações no painel, ações dos clientes e do admin. Toque numa linha para ver os detalhes.</p>
+          </div>
+        </CardHeader>
+        <CardContent>
+          <ActivityList barbershopId={shop.id} />
+        </CardContent>
+      </Card>
     </div>
+  );
+}
+
+const ago = (iso: string | null) => (iso ? formatDateTime(iso) : "Nunca (desde que o log começou)");
+
+/** Resumo para o suporte: acessos, movimento dos últimos 30 dias e equipe com login */
+function InsightsCard({ shop }: { shop: AdminBarbershop }) {
+  const { data: ins } = useBarbershopInsights(shop.id);
+  return (
+    <Card>
+      <CardHeader>
+        <CardTitle>Uso e acessos</CardTitle>
+      </CardHeader>
+      <CardContent className="space-y-4 text-sm">
+        <div className="grid grid-cols-3 gap-3">
+          <Info label="Profissionais" value={shop._count?.professionals ?? 0} />
+          <Info label="Serviços" value={shop._count?.services ?? 0} />
+          <Info label="Agendamentos" value={shop._count?.appointments ?? 0} />
+        </div>
+        {ins && (
+          <>
+            <div className="grid grid-cols-3 gap-3 border-t border-zinc-100 pt-4">
+              <Info label="Clientes" value={ins.clients} />
+              <Info label="Próximos" value={ins.upcoming} />
+              <Info
+                label="Avaliação"
+                value={
+                  ins.reviews.average !== null ? (
+                    <span className="inline-flex items-center gap-1">
+                      <Star className="size-3.5 fill-amber-400 text-amber-400" />
+                      {ins.reviews.average.toLocaleString("pt-BR")} <span className="text-xs font-normal text-zinc-500">({ins.reviews.count})</span>
+                    </span>
+                  ) : (
+                    "—"
+                  )
+                }
+              />
+            </div>
+            <div className="border-t border-zinc-100 pt-4">
+              <p className="text-xs text-zinc-500">Últimos 30 dias</p>
+              <p className="mt-0.5 font-medium">
+                {ins.last30Days.completed} atendimento(s) · {formatMoney(ins.last30Days.revenueCents)}
+              </p>
+              <p className="text-xs text-zinc-500">
+                {ins.last30Days.noShow} falta(s) · {ins.last30Days.canceled} cancelado(s)
+              </p>
+            </div>
+            <div className="space-y-2 border-t border-zinc-100 pt-4">
+              <Info label="Último login do dono" value={<span className="font-normal">{ago(ins.ownerLastLoginAt)}</span>} />
+              {ins.lastActivity && (
+                <Info
+                  label="Última atividade"
+                  value={
+                    <span className="font-normal">
+                      {formatDateTime(ins.lastActivity.createdAt)} — {ins.lastActivity.summary}
+                      {ins.lastActivity.actorName ? ` (${ins.lastActivity.actorName})` : ""}
+                    </span>
+                  }
+                />
+              )}
+              {ins.failedLogins7d > 0 && (
+                <p className="flex items-center gap-1.5 rounded-lg bg-red-50 px-2.5 py-1.5 text-xs text-red-700">
+                  <ShieldAlert className="size-3.5" /> {ins.failedLogins7d} tentativa(s) de login com senha errada nos últimos 7 dias
+                </p>
+              )}
+            </div>
+            {ins.team.length > 0 && shop.teamType === "TEAM" && (
+              <div className="border-t border-zinc-100 pt-4">
+                <p className="mb-2 text-xs text-zinc-500">Equipe</p>
+                <div className="space-y-2">
+                  {ins.team.map((p) => (
+                    <div key={p.id} className={p.active ? "" : "opacity-50"}>
+                      <p className="font-medium">
+                        {p.name}
+                        {!p.active && <span className="text-xs font-normal text-zinc-500"> · desativado</span>}
+                      </p>
+                      <p className="text-xs text-zinc-500">
+                        {p.email ? (
+                          <>
+                            {p.email} · {p.pendingPassword ? "ainda não trocou a senha temporária" : `último login: ${p.lastLoginAt ? formatDateTime(p.lastLoginAt) : "—"}`}
+                          </>
+                        ) : (
+                          "sem login próprio"
+                        )}
+                      </p>
+                    </div>
+                  ))}
+                </div>
+              </div>
+            )}
+          </>
+        )}
+      </CardContent>
+    </Card>
   );
 }
 

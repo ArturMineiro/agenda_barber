@@ -1,4 +1,4 @@
-import { Router, type Request } from "express";
+import { Router, type Request, type Response } from "express";
 import { DateTime } from "luxon";
 import { z } from "zod";
 import {
@@ -25,6 +25,7 @@ import bcrypt from "bcryptjs";
 import { BLOCKING_STATUSES, getAvailability } from "../scheduling/availability.service";
 import { assertSlotFree, createAppointment, inSlotTransaction } from "../scheduling/booking.service";
 import { deleteImage } from "../uploads/uploads.service";
+import { auditInfo } from "../../lib/audit";
 import { listReminders, markReminderSent } from "../reminders/reminders.service";
 import { buildReport } from "../reports/reports.service";
 
@@ -49,7 +50,7 @@ const BARBER_ROUTES: [string, RegExp][] = [
   ["DELETE", /^\/time-offs\/[^/]+$/],
 ];
 
-panelRoutes.use(requireAuth, requireRole("OWNER", "BARBER"), loadPanelContext, barberAllowlist(BARBER_ROUTES));
+panelRoutes.use(requireAuth, requireRole("OWNER", "BARBER", "SUPER_ADMIN"), loadPanelContext, barberAllowlist(BARBER_ROUTES));
 
 const shop = (req: Request) => req.barbershop!;
 /** Barbeiro logado: o id do profissional dele (undefined para o dono) */
@@ -200,6 +201,7 @@ panelRoutes.put("/services/:id", async (req, res) => {
 
 panelRoutes.delete("/services/:id", async (req, res) => {
   const service = await findOwnService(req);
+  auditInfo(res, { subject: service.name });
   const [appointments, queueEntries] = await Promise.all([
     prisma.appointment.count({ where: { serviceId: service.id } }),
     prisma.queueEntry.count({ where: { serviceId: service.id } }),
@@ -293,6 +295,7 @@ panelRoutes.put("/professionals/:id", async (req, res) => {
 
 panelRoutes.delete("/professionals/:id", async (req, res) => {
   const pro = await findOwnProfessional(req);
+  auditInfo(res, { subject: pro.name });
   // com histórico (agenda ou fila), só desativa: apagar levaria junto atendimentos e faturamento
   const [appointments, queueEntries] = await Promise.all([
     prisma.appointment.count({ where: { professionalId: pro.id } }),
@@ -322,6 +325,7 @@ async function findBarberUser(req: Request) {
 panelRoutes.post("/professionals/:id/access", async (req, res) => {
   const { email } = z.object({ email: z.string().trim().toLowerCase().pipe(z.email("E-mail inválido")) }).parse(req.body);
   const { pro, user } = await findBarberUser(req);
+  auditInfo(res, { subject: pro.name });
   if (user) throw conflict("Este profissional já tem acesso");
   if (await prisma.user.findUnique({ where: { email }, select: { id: true } })) {
     throw conflict("Este e-mail já é usado por outra conta", "EMAIL_TAKEN");
@@ -338,19 +342,22 @@ panelRoutes.post("/professionals/:id/access", async (req, res) => {
 
 /** Barbeiro esqueceu a senha: nova senha temporária (derruba as sessões abertas dele) */
 panelRoutes.post("/professionals/:id/access/reset", async (req, res) => {
-  const { user } = await findBarberUser(req);
+  const { pro, user } = await findBarberUser(req);
+  auditInfo(res, { subject: pro.name });
   if (!user) throw notFound("Este profissional ainda não tem acesso");
   res.json({ email: user.email, tempPassword: await setTemporaryPassword(user.id) });
 });
 
 panelRoutes.delete("/professionals/:id/access", async (req, res) => {
-  const { user } = await findBarberUser(req);
+  const { pro, user } = await findBarberUser(req);
+  auditInfo(res, { subject: pro.name });
   if (user) await prisma.user.delete({ where: { id: user.id } }); // professional.userId vira null
   res.status(204).end();
 });
 
 panelRoutes.put("/professionals/:id/hours", async (req, res) => {
   const pro = await findOwnProfessional(req);
+  auditInfo(res, { subject: pro.name });
   const { hours } = workingHoursSchema.parse(req.body);
   await prisma.$transaction([
     prisma.workingHour.deleteMany({ where: { professionalId: pro.id } }),
@@ -437,6 +444,7 @@ panelRoutes.patch("/appointments/:id/status", async (req, res) => {
   const { status } = updateAppointmentStatusSchema.parse(req.body);
   const appt = await prisma.appointment.findFirst({ where: { id: String(req.params.id), barbershopId: shop(req).id, ...own(req) } });
   if (!appt) throw notFound("Agendamento não encontrado");
+  auditInfo(res, { subject: appt.clientName });
 
   const data =
     status === "CANCELED"
@@ -479,8 +487,15 @@ panelRoutes.get("/reminders", async (req, res) => {
 /** O dono abriu o WhatsApp com o lembrete: marca como lembrado */
 panelRoutes.post("/appointments/:id/reminder", async (req, res) => {
   await markReminderSent(shop(req).id, String(req.params.id), scope(req));
+  await clientOf(res, String(req.params.id));
   res.json({ ok: true });
 });
+
+/** Nome do cliente do horário, para a frase do log de atividades */
+async function clientOf(res: Response, id: string) {
+  const a = await prisma.appointment.findUnique({ where: { id }, select: { clientName: true } });
+  auditInfo(res, { subject: a?.clientName });
+}
 
 /** Dono desmarca, com motivo (vai na mensagem de aviso ao cliente) */
 panelRoutes.post("/appointments/:id/cancel", async (req, res) => {
@@ -490,6 +505,7 @@ panelRoutes.post("/appointments/:id/cancel", async (req, res) => {
     data: { status: "CANCELED", canceledAt: new Date(), canceledBy: "barbershop", cancelReason: reason ?? null },
   });
   if (!count) throw notFound("Agendamento não encontrado ou já cancelado");
+  await clientOf(res, String(req.params.id));
   res.json({ ok: true });
 });
 

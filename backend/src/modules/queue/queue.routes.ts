@@ -9,7 +9,7 @@ import { addToQueue, callNext, getQueueBoard, setQueueStatus } from "./queue.ser
 /** Fila presencial do painel: /api/panel/queue */
 export const queueRoutes = Router();
 // barbeiro da equipe também usa a fila, mas só a própria (req.scopeProfessionalId)
-queueRoutes.use(requireAuth, requireRole("OWNER", "BARBER"), loadPanelContext);
+queueRoutes.use(requireAuth, requireRole("OWNER", "BARBER", "SUPER_ADMIN"), loadPanelContext);
 
 /** Barbeiro só mexe na própria fila */
 function assertOwnColumn(req: Request, professionalId: string) {

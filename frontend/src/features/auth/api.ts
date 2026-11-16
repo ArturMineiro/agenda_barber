@@ -1,3 +1,4 @@
+import { exitAdminMode } from "@/lib/admin-mode";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import type { ChangePasswordInput, LoginInput, RegisterOwnerInput } from "@navalha/shared";
 import { api, ApiError } from "@/lib/api";
@@ -43,6 +44,7 @@ export function useLogout() {
   return useMutation({
     mutationFn: () => api.post("/auth/logout"),
     onSuccess: () => {
+      exitAdminMode();
       qc.clear();
       qc.setQueryData(meKey, null);
     },

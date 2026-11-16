@@ -26,10 +26,10 @@ const ok = (cond, label, extra) => {
 };
 
 /** Cliente HTTP com cookie próprio (cada um é um "aparelho") */
-function client() {
+function client(extraHeaders = {}) {
   let cookie = "";
-  return async (method, path, body, raw) => {
-    const headers = {};
+  const call = async (method, path, body, raw) => {
+    const headers = { ...extraHeaders };
     if (body !== undefined) headers["content-type"] = "application/json";
     if (cookie) headers.cookie = cookie;
     const res = await fetch(BASE + path, { method, headers, body: body === undefined ? undefined : raw ? body : JSON.stringify(body) });
@@ -44,6 +44,16 @@ function client() {
     }
     return { status: res.status, data };
   };
+  /** mesmo login (cookie), mandando outros headers — ex.: admin escolhendo a barbearia */
+  call.with = (headers) => {
+    const other = client({ ...extraHeaders, ...headers });
+    other.setCookie(cookie);
+    return other;
+  };
+  call.setCookie = (c) => {
+    cookie = c;
+  };
+  return call;
 }
 
 const spDate = (offsetDays, tz = "America/Sao_Paulo") => new Date(Date.now() + offsetDays * 86_400_000).toLocaleDateString("en-CA", { timeZone: tz });
@@ -325,7 +335,54 @@ async function main() {
   ok((await prisma.queueEntry.count({ where: { professionalId: ana.id } })) === 3, "histórico da fila preservado");
   ok((await client()("GET", `/public/barbershops/${qshop.slug}/queue`)).status === 200, "fila pública responde");
 
+  // ---------------------------------------------------------------
+  group("Admin: gerenciar o painel de outra barbearia");
+  const { c: dono, shop: alvo, email: donoEmail } = await registerShop(admin, equipe, { prefix: "admin" });
+  ok((await admin("GET", "/panel/barbershop")).status === 400, "admin sem escolher a barbearia não entra no painel");
+  const asAdmin = admin.with({ "x-barbershop-id": alvo.id });
+  const seen = await asAdmin("GET", "/panel/barbershop");
+  ok(seen.status === 200 && seen.data.id === alvo.id, "admin abre o painel da barbearia escolhida", seen);
+  const svc = await asAdmin("POST", "/panel/services", { name: "Barba do admin", durationMinutes: 20, priceCents: 2500, active: true });
+  ok(svc.status === 201, "admin cadastra serviço na barbearia dos outros", svc);
+  ok((await dono("GET", "/panel/services")).data.some((x) => x.name === "Barba do admin"), "dono vê o serviço criado pelo admin");
+  const cfg = (await asAdmin("GET", "/panel/barbershop")).data;
+  const put = await asAdmin("PUT", "/panel/barbershop", { ...pickSettings(cfg), description: "Ajustado pelo suporte" });
+  ok(put.status === 200 && (await dono("GET", "/panel/barbershop")).data.description === "Ajustado pelo suporte", "admin altera os ajustes", put);
+  ok((await asAdmin("GET", "/panel/push")).status === 403, "notificações do celular continuam só do dono");
+  ok((await dono.with({ "x-barbershop-id": shop.id })("GET", "/panel/barbershop")).status === 404, "dono continua sem acesso à barbearia de outro");
+
+  // ---------------------------------------------------------------
+  group("Log de atividades");
+  const wrong = client();
+  await wrong("POST", "/auth/login", { email: donoEmail, password: "senha-errada" });
+  await dono("POST", "/auth/login", { email: donoEmail, password: "senhadono123" });
+  await new Promise((r) => setTimeout(r, 500)); // o log grava logo depois da resposta
+  const act = (await admin("GET", `/admin/barbershops/${alvo.id}/activity`)).data;
+  const actions = act.items.map((a) => a.action);
+  ok(actions.includes("auth.register"), "registra o cadastro", actions);
+  ok(actions.includes("admin.approve"), "registra a aprovação pelo admin", actions);
+  const created = act.items.find((a) => a.action === "panel.service.create");
+  ok(created?.actorRole === "SUPER_ADMIN" && created.details?.modoAdmin === true && created.summary.includes("Barba do admin"), "alteração do admin marcada como modo admin", created);
+  ok(act.items.some((a) => a.action === "auth.login_failed" && a.actorName?.startsWith("Dono")), "registra login com senha errada na barbearia certa");
+  ok(act.items.some((a) => a.action === "auth.login" && a.actorRole === "OWNER"), "registra login do dono");
+  const dump = JSON.stringify(act);
+  ok(!dump.includes("senhadono123") && !dump.includes("senha-errada"), "senhas nunca vão para o log");
+  ok(act.items.every((a) => a.barbershopId === alvo.id), "log da barbearia só tem o que é dela");
+  const onlyAuth = (await admin("GET", `/admin/barbershops/${alvo.id}/activity?kind=auth`)).data.items;
+  ok(onlyAuth.length > 0 && onlyAuth.every((a) => a.action.startsWith("auth.")), "filtro de acessos");
+  const global = (await admin("GET", `/admin/activity?q=${encodeURIComponent("Barba do admin")}`)).data.items;
+  ok(global.some((a) => a.barbershop?.id === alvo.id), "busca no log geral");
+  const ins = (await admin("GET", `/admin/barbershops/${alvo.id}/insights`)).data;
+  ok(ins.ownerLastLoginAt && ins.failedLogins7d >= 1 && ins.lastActivity, "resumo com último login e tentativas erradas", ins);
+  ok((await dono("GET", "/admin/activity")).status === 403, "dono não lê o log");
+
   console.log(failures ? `\n✗ ${failures} falha(s)` : "\n✓ Tudo certo");
+}
+
+/** Só os campos editáveis dos ajustes (o PUT valida o formato completo) */
+function pickSettings(b) {
+  const keys = ["name", "slug", "description", "phone", "whatsapp", "instagram", "address", "city", "logoUrl", "coverUrl", "primaryColor", "secondaryColor", "pageTheme", "bookingMode", "timezone", "slotIntervalMinutes", "minAdvanceMinutes", "maxAdvanceDays", "cancelMinAdvanceMinutes", "reminderDigestHour"];
+  return Object.fromEntries(keys.filter((k) => k in b && b[k] !== null).map((k) => [k, b[k]]));
 }
 
 main()

@@ -2,7 +2,7 @@ import type { NextFunction, Request, Response } from "express";
 import type { Role } from "@prisma/client";
 import { prisma } from "../lib/prisma";
 import { AUTH_COOKIE, verifyToken } from "../lib/auth";
-import { forbidden, notFound, unauthorized } from "../lib/errors";
+import { badRequest, forbidden, notFound, unauthorized } from "../lib/errors";
 
 export const publicUserSelect = {
   id: true,
@@ -48,6 +48,16 @@ export function requireRole(...roles: Role[]) {
 export async function loadOwnerBarbershop(req: Request, _res: Response, next: NextFunction) {
   const ownerId = req.user!.id;
   const requested = req.header("x-barbershop-id");
+
+  // admin da plataforma: gerencia o painel de qualquer barbearia (escolhida no header)
+  if (req.user!.role === "SUPER_ADMIN") {
+    if (!requested) throw badRequest("Escolha a barbearia no painel do administrador", "ADMIN_NO_BARBERSHOP");
+    const barbershop = await prisma.barbershop.findUnique({ where: { id: requested } });
+    if (!barbershop) throw notFound("Barbearia não encontrada");
+    req.barbershop = barbershop;
+    req.adminActing = true;
+    return next();
+  }
 
   const barbershop = await prisma.barbershop.findFirst({
     where: { ownerId, ...(requested ? { id: requested } : {}) },

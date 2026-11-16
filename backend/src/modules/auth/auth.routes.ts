@@ -3,6 +3,7 @@ import rateLimit from "express-rate-limit";
 import { changePasswordSchema, loginSchema, registerOwnerSchema, slugSchema } from "@navalha/shared";
 import { clearAuthCookie, startSession } from "../../lib/auth";
 import { requireAuth } from "../../middlewares/auth";
+import { auditInfo } from "../../lib/audit";
 import { changePassword, isSlugAvailable, login, registerOwner } from "./auth.service";
 
 export const authRoutes = Router();
@@ -23,6 +24,7 @@ const loginLimiter = rateLimit({
 authRoutes.post("/register", registerLimiter, async (req, res) => {
   const input = registerOwnerSchema.parse(req.body);
   const user = await registerOwner(input);
+  auditInfo(res, { actorId: user.id, actorName: user.name, actorRole: user.role });
   startSession(res, user);
   res.status(201).json({ user });
 });
@@ -30,6 +32,7 @@ authRoutes.post("/register", registerLimiter, async (req, res) => {
 authRoutes.post("/login", loginLimiter, async (req, res) => {
   const input = loginSchema.parse(req.body);
   const { tokenVersion, ...user } = await login(input);
+  auditInfo(res, { actorId: user.id, actorName: user.name, actorRole: user.role });
   startSession(res, { ...user, tokenVersion });
   res.json({ user });
 });

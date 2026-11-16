@@ -22,7 +22,8 @@ export const router = createBrowserRouter([
   },
   {
     // dono e barbeiro da equipe (o barbeiro vê só a própria agenda)
-    element: <RequireAuth roles={["OWNER", "BARBER"]} />,
+    // admin da plataforma também, no "modo administrador" (gerenciando uma barbearia)
+    element: <RequireAuth roles={["OWNER", "BARBER", "SUPER_ADMIN"]} />,
     children: [
       {
         path: "/painel",
@@ -55,6 +56,7 @@ export const router = createBrowserRouter([
           { path: "barbearias", lazy: page(() => import("@/features/admin/pages/AdminBarbershopsPage"), "AdminBarbershopsPage") },
           { path: "barbearias/:id", lazy: page(() => import("@/features/admin/pages/AdminBarbershopDetailPage"), "AdminBarbershopDetailPage") },
           { path: "mensalidades", lazy: page(() => import("@/features/admin/pages/AdminPaymentsPage"), "AdminPaymentsPage") },
+          { path: "atividade", lazy: page(() => import("@/features/admin/pages/AdminActivityPage"), "AdminActivityPage") },
           { path: "planos", lazy: page(() => import("@/features/admin/pages/AdminPlansPage"), "AdminPlansPage") },
         ],
       },

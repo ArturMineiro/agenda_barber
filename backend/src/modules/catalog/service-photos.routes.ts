@@ -7,7 +7,7 @@ import { deleteImage, saveServicePhoto } from "../uploads/uploads.service";
 
 /** Fotos do catálogo: /api/panel/services/:serviceId/photos */
 export const servicePhotoRoutes = Router({ mergeParams: true });
-servicePhotoRoutes.use(requireAuth, requireRole("OWNER"), loadOwnerBarbershop);
+servicePhotoRoutes.use(requireAuth, requireRole("OWNER", "SUPER_ADMIN"), loadOwnerBarbershop);
 
 /** Por serviço: suficiente para mostrar ângulos (frente, lado, nuca) sem pesar a página */
 export const MAX_PHOTOS_PER_SERVICE = 3;

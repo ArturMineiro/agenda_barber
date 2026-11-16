@@ -155,6 +155,7 @@ model Barbershop {
   pushSubscriptions PushSubscription[]
   servicePhotos ServicePhoto[]
   reviews       Review[]
+  auditLogs     AuditLog[]
 
   @@index([ownerId])
   @@index([status])
@@ -423,4 +424,30 @@ model Review {
   @@index([barbershopId, createdAt])
   @@index([serviceId])
   @@map("reviews")
+}
+
+/// Log de atividades: quem fez o quê (painel, admin, login, cliente pelo link). Só leitura para o admin.
+model AuditLog {
+  id           String   @id @default(cuid())
+  barbershopId String?
+  /// usuário que fez a ação (null = cliente pelo link público ou sistema)
+  actorId      String?
+  actorName    String?
+  /// OWNER | BARBER | SUPER_ADMIN | CLIENT | SYSTEM
+  actorRole    String
+  /// chave estável, ex.: "panel.service.update"
+  action       String
+  /// frase legível para a tela, ex.: "Editou o serviço"
+  summary      String
+  /// dados da requisição já sem senhas/tokens
+  details      Json?
+  ip           String?
+  createdAt    DateTime @default(now())
+
+  barbershop Barbershop? @relation(fields: [barbershopId], references: [id], onDelete: Cascade)
+
+  @@index([barbershopId, createdAt])
+  @@index([actorId, createdAt])
+  @@index([createdAt])
+  @@map("audit_logs")
 }

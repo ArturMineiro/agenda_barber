@@ -11,6 +11,7 @@ import {
 import { prisma } from "../../lib/prisma";
 import { env } from "../../config/env";
 import { AppError, notFound } from "../../lib/errors";
+import { auditInfo } from "../../lib/audit";
 import { getAvailability } from "../scheduling/availability.service";
 import { createAppointment } from "../scheduling/booking.service";
 import { getPublicQueue } from "../queue/queue.service";
@@ -116,6 +117,12 @@ publicRoutes.post("/barbershops/:slug/bookings", bookingLimiter, async (req, res
   assertScheduleMode(b);
   const input = createBookingSchema.parse(req.body);
   const appt = await createAppointment({ barbershop: b, input, source: "public" });
+  auditInfo(res, {
+    barbershopId: b.id,
+    actorName: appt.clientName,
+    actorRole: "CLIENT",
+    subject: `${appt.service.name} com ${appt.professional.name}`,
+  });
   // avisa o celular do dono sem atrasar a resposta do cliente
   void notifyNewBooking({ ...appt, barbershop: b });
   res.status(201).json({
@@ -132,6 +139,12 @@ publicRoutes.post("/barbershops/:slug/bookings", bookingLimiter, async (req, res
 
 // ---------- Link do cliente: /agendamento/:token ----------
 
+/** Cliente pelo link: barbearia e nome para o log de atividades */
+async function clientAudit(res: import("express").Response, token: string) {
+  const a = await prisma.appointment.findUnique({ where: { accessToken: token }, select: { barbershopId: true, clientName: true } });
+  if (a) auditInfo(res, { barbershopId: a.barbershopId, actorName: a.clientName, actorRole: "CLIENT" });
+}
+
 const manageLimiter = rateLimit({ windowMs: 15 * 60 * 1000, limit: 60, standardHeaders: true, legacyHeaders: false });
 
 publicRoutes.get("/appointments/:token", manageLimiter, async (req, res) => {
@@ -146,6 +159,7 @@ publicRoutes.get("/appointments/:token", manageLimiter, async (req, res) => {
 });
 
 publicRoutes.post("/appointments/:token/cancel", manageLimiter, async (req, res) => {
+  await clientAudit(res, String(req.params.token));
   const { reason } = cancelAppointmentSchema.parse(req.body);
   await cancelByClient(String(req.params.token), reason);
   res.json({ ok: true });
@@ -157,6 +171,7 @@ publicRoutes.get("/appointments/:token/availability", manageLimiter, async (req,
 });
 
 publicRoutes.post("/appointments/:token/reschedule", manageLimiter, async (req, res) => {
+  await clientAudit(res, String(req.params.token));
   const { startsAt, professionalId } = rescheduleSchema.parse(req.body);
   await rescheduleByClient(String(req.params.token), startsAt, professionalId);
   res.json({ ok: true });
@@ -164,6 +179,7 @@ publicRoutes.post("/appointments/:token/reschedule", manageLimiter, async (req, 
 
 /** Cliente avalia o atendimento (cria ou edita a própria avaliação) */
 publicRoutes.post("/appointments/:token/review", manageLimiter, async (req, res) => {
+  await clientAudit(res, String(req.params.token));
   const input = reviewSchema.parse(req.body);
   const review = await reviewByClient(String(req.params.token), input);
   res.json({ rating: review.rating, comment: review.comment });

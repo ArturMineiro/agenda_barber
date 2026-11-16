@@ -1,4 +1,4 @@
-import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
+import { useInfiniteQuery, useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { toast } from "sonner";
 import type {
   ApproveBarbershopInput,
@@ -101,3 +101,50 @@ export const useSavePlan = () =>
     ({ id, ...input }: PlanInput & { id?: string }) => (id ? api.put(`/admin/plans/${id}`, input) : api.post("/admin/plans", input)),
     "Plano salvo",
   );
+
+// ---------- Log de atividades ----------
+
+export type ActivityKind = "all" | "auth" | "admin" | "changes" | "clients";
+
+export interface ActivityItem {
+  id: string;
+  barbershopId: string | null;
+  actorId: string | null;
+  actorName: string | null;
+  actorRole: "OWNER" | "BARBER" | "SUPER_ADMIN" | "CLIENT" | "SYSTEM";
+  action: string;
+  summary: string;
+  details: Record<string, unknown> | null;
+  ip: string | null;
+  createdAt: string;
+  barbershop: { id: string; name: string } | null;
+}
+
+export function useActivity(f: { barbershopId?: string; kind: ActivityKind; q: string }) {
+  return useInfiniteQuery({
+    queryKey: [...adminKeys.all, "activity", f],
+    initialPageParam: undefined as string | undefined,
+    queryFn: ({ pageParam }) =>
+      api.get<{ items: ActivityItem[]; nextBefore: string | null }>(
+        `/admin${f.barbershopId ? `/barbershops/${f.barbershopId}/activity` : "/activity"}${qs({ kind: f.kind, q: f.q, before: pageParam })}`,
+      ),
+    getNextPageParam: (last) => last.nextBefore ?? undefined,
+  });
+}
+
+export interface BarbershopInsights {
+  ownerLastLoginAt: string | null;
+  failedLogins7d: number;
+  lastActivity: { createdAt: string; summary: string; actorName: string | null } | null;
+  clients: number;
+  upcoming: number;
+  last30Days: { completed: number; noShow: number; canceled: number; revenueCents: number };
+  reviews: { average: number | null; count: number };
+  team: { id: string; name: string; active: boolean; email: string | null; pendingPassword: boolean; lastLoginAt: string | null }[];
+}
+
+export const useBarbershopInsights = (id: string) =>
+  useQuery({
+    queryKey: [...adminKeys.barbershop(id), "insights"],
+    queryFn: () => api.get<BarbershopInsights>(`/admin/barbershops/${id}/insights`),
+  });
