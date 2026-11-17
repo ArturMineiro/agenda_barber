@@ -1,13 +1,13 @@
 import * as React from "react";
 import { Link, useNavigate, useParams } from "react-router-dom";
-import { ArrowLeft, ExternalLink, KeyRound, Mail, MessageCircle, Pause, Play, Receipt, Settings2, ShieldAlert, Star } from "lucide-react";
+import { ArrowLeft, ExternalLink, KeyRound, Mail, MessageCircle, Pause, Play, Settings2, ShieldAlert, Star } from "lucide-react";
 import { TempPasswordDialog } from "@/components/TempPasswordDialog";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Dialog } from "@/components/ui/dialog";
 import { Field, Input, Select } from "@/components/ui/input";
 import { FullPageSpinner } from "@/components/ui/misc";
-import { formatDateOnly, formatDateTime, formatMoney, formatPhone, publicUrl, whatsappLink } from "@/lib/utils";
+import { formatDateTime, formatMoney, formatPhone, publicUrl, whatsappLink } from "@/lib/utils";
 import { enterAdminMode } from "@/lib/admin-mode";
 import type { AdminBarbershop, Plan } from "@/types/api";
 import {
@@ -22,8 +22,7 @@ import {
   useSuspend,
 } from "../api";
 import { ActivityList } from "../components/ActivityList";
-import { PaymentRow } from "../components/PaymentRow";
-import { ShopStatusBadge, SubStatusBadge } from "../components/status";
+import { ShopStatusBadge } from "../components/status";
 
 const toCents = (v: string) => Math.round(Number(v.replace(",", ".")) * 100);
 const fromCents = (c: number) => (c / 100).toFixed(2).replace(".", ",");
@@ -100,39 +99,20 @@ export function AdminBarbershopDetailPage() {
           {sub && (
             <Card>
               <CardHeader>
-                <CardTitle>Assinatura</CardTitle>
+                <div>
+                  <CardTitle>Combinado</CardTitle>
+                  <p className="mt-0.5 text-sm text-zinc-500">Valor negociado e recebido por fora (sem cobrança automática).</p>
+                </div>
                 <EditSubscription shop={shop} />
               </CardHeader>
               <CardContent className="grid grid-cols-2 gap-4 sm:grid-cols-4">
                 <Info label="Plano" value={sub.plan.name} />
-                <Info label="Mensalidade" value={formatMoney(sub.priceCents)} />
-                <Info label="Vencimento" value={`Todo dia ${sub.billingDay}`} />
-                <Info label="Situação" value={<SubStatusBadge status={sub.status} />} />
-                {sub.trialEndsAt && <Info label="Cortesia até" value={new Date(sub.trialEndsAt).toLocaleDateString("pt-BR")} />}
+                <Info label="Valor/mês" value={formatMoney(sub.priceCents)} />
+                <Info label="Paga todo dia" value={sub.billingDay} />
               </CardContent>
             </Card>
           )}
 
-          {sub && (
-            <Card>
-              <CardHeader>
-                <CardTitle>Mensalidades</CardTitle>
-              </CardHeader>
-              <CardContent className="px-0 sm:px-0">
-                {sub.payments?.length ? (
-                  <div className="divide-y divide-zinc-100">
-                    {sub.payments.map((p) => (
-                      <PaymentRow key={p.id} payment={p} />
-                    ))}
-                  </div>
-                ) : (
-                  <p className="flex items-center gap-2 px-4 text-sm text-zinc-500 sm:px-5">
-                    <Receipt className="size-4" /> A primeira cobrança é gerada 7 dias antes do vencimento.
-                  </p>
-                )}
-              </CardContent>
-            </Card>
-          )}
         </div>
 
         <div className="space-y-5">
@@ -320,7 +300,6 @@ function ApprovalCard({ shop }: { shop: AdminBarbershop }) {
   const [planId, setPlanId] = React.useState("");
   const [price, setPrice] = React.useState("");
   const [billingDay, setBillingDay] = React.useState(String(Math.min(new Date().getDate(), 28)));
-  const [trialDays, setTrialDays] = React.useState("0");
 
   React.useEffect(() => {
     if (plans && !planId) {
@@ -343,7 +322,7 @@ function ApprovalCard({ shop }: { shop: AdminBarbershop }) {
       <CardHeader>
         <div>
           <CardTitle>Aprovar cadastro</CardTitle>
-          <p className="mt-0.5 text-sm text-zinc-500">Defina o plano e as condições de cobrança.</p>
+          <p className="mt-0.5 text-sm text-zinc-500">Defina o plano e o valor combinado com o dono.</p>
         </div>
       </CardHeader>
       <CardContent className="space-y-4">
@@ -358,15 +337,12 @@ function ApprovalCard({ shop }: { shop: AdminBarbershop }) {
               ))}
           </Select>
         </Field>
-        <div className="grid grid-cols-3 gap-3">
-          <Field label="Valor/mês (R$)" hint="Pode negociar">
+        <div className="grid grid-cols-2 gap-3">
+          <Field label="Valor/mês (R$)" hint="O combinado com o dono">
             <Input inputMode="decimal" value={price} onChange={(e) => setPrice(e.target.value)} />
           </Field>
-          <Field label="Dia do venc.">
+          <Field label="Paga todo dia">
             <Input type="number" min={1} max={28} value={billingDay} onChange={(e) => setBillingDay(e.target.value)} />
-          </Field>
-          <Field label="Cortesia (dias)">
-            <Input type="number" min={0} max={90} value={trialDays} onChange={(e) => setTrialDays(e.target.value)} />
           </Field>
         </div>
         <div className="flex flex-col gap-2 sm:flex-row">
@@ -380,7 +356,7 @@ function ApprovalCard({ shop }: { shop: AdminBarbershop }) {
                 planId,
                 priceCents: toCents(price),
                 billingDay: Number(billingDay),
-                trialDays: Number(trialDays),
+                trialDays: 0,
               })
             }
           >
@@ -422,8 +398,8 @@ function EditSubscription({ shop }: { shop: AdminBarbershop }) {
       <Dialog
         open={open}
         onClose={() => setOpen(false)}
-        title="Alterar assinatura"
-        description="Vale a partir da próxima cobrança gerada."
+        title="Alterar combinado"
+        description="Plano (limite de profissionais), valor e dia de pagamento combinados com o dono."
         footer={
           <>
             <Button variant="outline" onClick={() => setOpen(false)} className="flex-1 sm:flex-none">
@@ -465,15 +441,10 @@ function EditSubscription({ shop }: { shop: AdminBarbershop }) {
             <Field label="Valor/mês (R$)">
               <Input inputMode="decimal" value={price} onChange={(e) => setPrice(e.target.value)} />
             </Field>
-            <Field label="Dia do vencimento">
+            <Field label="Paga todo dia">
               <Input type="number" min={1} max={28} value={billingDay} onChange={(e) => setBillingDay(e.target.value)} />
             </Field>
           </div>
-          {sub.payments?.some((p) => p.status === "PENDING") && (
-            <p className="text-xs text-zinc-500">
-              Cobranças já geradas mantêm o valor original (ex.: vencimento {formatDateOnly(sub.payments.find((p) => p.status === "PENDING")!.dueDate)}).
-            </p>
-          )}
         </div>
       </Dialog>
     </>

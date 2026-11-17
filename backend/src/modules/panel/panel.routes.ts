@@ -70,7 +70,6 @@ panelRoutes.get("/barbershop", async (req, res) => {
         : {
             include: {
               plan: true,
-              payments: { where: { status: { in: ["PENDING", "OVERDUE"] } }, orderBy: { dueDate: "asc" } },
             },
           },
       _count: { select: { professionals: { where: { active: true } } } },

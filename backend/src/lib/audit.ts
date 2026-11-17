@@ -103,10 +103,7 @@ const ACTIONS: Record<string, Label> = {
   "POST /admin/barbershops/:x/suspend": { action: "admin.suspend", summary: (c) => `Admin suspendeu a barbearia${c.body.reason ? ` — ${c.body.reason}` : ""}` },
   "POST /admin/barbershops/:x/reactivate": { action: "admin.reactivate", summary: "Admin reativou a barbearia" },
   "POST /admin/barbershops/:x/owner-password": { action: "admin.owner_password", summary: "Admin gerou senha temporária para o dono" },
-  "PUT /admin/barbershops/:x/subscription": { action: "admin.subscription", summary: "Admin alterou a assinatura" },
-  "POST /admin/payments/:x/pay": { action: "admin.payment.pay", summary: "Admin deu baixa numa mensalidade" },
-  "POST /admin/payments/:x/cancel": { action: "admin.payment.cancel", summary: "Admin abonou uma mensalidade" },
-  "POST /admin/billing/sync": { action: "admin.billing.sync", summary: "Admin rodou a geração de cobranças" },
+  "PUT /admin/barbershops/:x/subscription": { action: "admin.subscription", summary: "Admin alterou o plano/valor combinado" },
   "POST /admin/plans": { action: "admin.plan.create", summary: named("Admin criou o plano") },
   "PUT /admin/plans/:x": { action: "admin.plan.update", summary: named("Admin editou o plano") },
 };

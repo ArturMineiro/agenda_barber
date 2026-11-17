@@ -376,6 +376,14 @@ async function main() {
   ok(ins.ownerLastLoginAt && ins.failedLogins7d >= 1 && ins.lastActivity, "resumo com último login e tentativas erradas", ins);
   ok((await dono("GET", "/admin/activity")).status === 403, "dono não lê o log");
 
+  // ---------------------------------------------------------------
+  group("Valor combinado (sem cobrança automática)");
+  ok((await prisma.payment.count({ where: { subscription: { barbershopId: alvo.id } } })) === 0, "aprovar não gera mensalidade");
+  ok((await admin("GET", "/admin/payments")).status === 404, "tela de mensalidades fora da main");
+  const combinado = await admin("PUT", `/admin/barbershops/${alvo.id}/subscription`, { planId: equipe.id, priceCents: 4500, billingDay: 15 });
+  ok(combinado.status === 200 && (await admin("GET", `/admin/barbershops/${alvo.id}`)).data.subscription.priceCents === 4500, "admin ajusta o valor combinado", combinado);
+  ok((await admin("GET", "/admin/stats")).data.mrrCents > 0, "visão geral soma o combinado");
+
   console.log(failures ? `\n✗ ${failures} falha(s)` : "\n✓ Tudo certo");
 }
 

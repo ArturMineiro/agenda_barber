@@ -1,6 +1,5 @@
 import { Link } from "react-router-dom";
 import { ChevronRight, User, Users } from "lucide-react";
-import { Badge } from "@/components/ui/badge";
 import { formatMoney } from "@/lib/utils";
 import type { AdminBarbershop } from "@/types/api";
 import { ShopStatusBadge } from "./status";
@@ -18,7 +17,6 @@ export function BarbershopRow({ shop }: { shop: AdminBarbershop }) {
         <div className="flex flex-wrap items-center gap-x-2 gap-y-1">
           <p className="truncate font-medium">{shop.name}</p>
           <ShopStatusBadge status={shop.status} />
-          {!!shop.overduePayments && <Badge tone="danger">{shop.overduePayments} em atraso</Badge>}
         </div>
         <p className="mt-0.5 flex items-center gap-1.5 truncate text-xs text-zinc-500">
           {shop.teamType === "SOLO" ? <User className="size-3" /> : <Users className="size-3" />}

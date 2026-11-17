@@ -19,13 +19,13 @@ Cada barbearia escolhe (no cadastro ou em Ajustes) **um** dos modos:
 - **Horário marcado** — agenda online: o cliente escolhe dia e horário pelo link.
 - **Ordem de chegada** — fila presencial, **uma fila por barbeiro**. O barbeiro adiciona quem chegou e usa *Chamar próximo → Concluir / Não veio*; pode abrir e fechar a própria fila. O link público não deixa entrar na fila: mostra o movimento de cada barbeiro (quantos esperam e a espera estimada, sem nomes) e o botão *Como chegar*. A espera é calculada pelo tempo restante de quem está na cadeira mais a duração dos serviços de quem espera.
 
-### Fluxo de aprovação e cobrança
+### Fluxo de aprovação e valor combinado
 
 1. O dono se cadastra → barbearia fica **PENDENTE**. Ele já pode configurar tudo, mas o link público ainda não recebe agendamentos.
-2. O super admin aprova, escolhendo **plano**, **valor** (negociável), **dia de vencimento** e **dias de cortesia** → barbearia **ATIVA**.
-3. A rotina de cobrança (roda ao subir a API e de hora em hora) gera a mensalidade 7 dias antes do vencimento.
-4. Venceu e não pagou → cobrança **ATRASADA**. Passou da tolerância (`BILLING_GRACE_DAYS`, padrão 5 dias) → barbearia **SUSPENSA** automaticamente.
-5. O admin dá baixa no pagamento → se não houver outras pendências, a barbearia é **reativada sozinha**.
+2. O super admin aprova, escolhendo **plano** (limite de profissionais), **valor** e **dia de pagamento** combinados com o dono → barbearia **ATIVA**.
+3. O pagamento é negociado e recebido por fora: **não há cobrança automática**. Se precisar, o admin **suspende** e **reativa** a barbearia na mão.
+
+> A cobrança automática (mensalidades geradas todo mês, atraso e suspensão sozinha) está guardada na branch `feature/assinatura-dinamica`.
 
 O limite de profissionais ativos vem do plano (Solo = 1, Equipe = 5, Premium = ilimitado — editáveis no painel).
 

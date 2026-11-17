@@ -1,27 +1,20 @@
 import { Link } from "react-router-dom";
-import { AlertTriangle, ArrowRight, CheckCircle2, Clock, DollarSign, RefreshCw, Store, TrendingUp } from "lucide-react";
-import { Button } from "@/components/ui/button";
+import { ArrowRight, CheckCircle2, Clock, PauseCircle, Store, TrendingUp } from "lucide-react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { EmptyState, PageHeader, Skeleton, StatCard } from "@/components/ui/misc";
 import { formatMoney } from "@/lib/utils";
-import { useAdminBarbershops, useAdminStats, useSyncBilling } from "../api";
+import { useAdminBarbershops, useAdminStats } from "../api";
 import { BarbershopRow } from "../components/BarbershopRow";
 
 export function AdminDashboardPage() {
   const { data: stats } = useAdminStats();
   const { data: pending, isLoading } = useAdminBarbershops({ status: "PENDING" });
-  const sync = useSyncBilling();
 
   return (
     <div className="space-y-6">
       <PageHeader
         title="Visão geral"
         description="Saúde da plataforma e o que precisa da sua atenção."
-        actions={
-          <Button variant="outline" size="sm" onClick={() => sync.mutate()} loading={sync.isPending}>
-            <RefreshCw /> Sincronizar cobranças
-          </Button>
-        }
       />
 
       <div className="grid grid-cols-2 gap-3 lg:grid-cols-4">
@@ -29,15 +22,10 @@ export function AdminDashboardPage() {
           [0, 1, 2, 3].map((i) => <Skeleton key={i} className="h-24" />)
         ) : (
           <>
-            <StatCard label="Receita mensal (MRR)" value={formatMoney(stats.mrrCents)} icon={<TrendingUp />} />
-            <StatCard label="Recebido no mês" value={formatMoney(stats.receivedThisMonthCents)} icon={<DollarSign />} />
-            <StatCard label="Barbearias ativas" value={stats.barbershops.ACTIVE} hint={`${stats.barbershops.SUSPENDED} suspensa(s)`} icon={<Store />} />
-            <StatCard
-              label="Em atraso"
-              value={formatMoney(stats.overdueCents)}
-              hint={`${stats.overdueCount} cobrança(s)`}
-              icon={<AlertTriangle />}
-            />
+            <StatCard label="Combinado por mês" value={formatMoney(stats.mrrCents)} hint="Soma das barbearias ativas" icon={<TrendingUp />} />
+            <StatCard label="Barbearias ativas" value={stats.barbershops.ACTIVE} icon={<Store />} />
+            <StatCard label="Aguardando aprovação" value={stats.barbershops.PENDING} icon={<Clock />} />
+            <StatCard label="Suspensas" value={stats.barbershops.SUSPENDED} icon={<PauseCircle />} />
           </>
         )}
       </div>

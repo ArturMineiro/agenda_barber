@@ -5,16 +5,12 @@ import {
   approveBarbershopSchema,
   BARBERSHOP_STATUS,
   changeSubscriptionSchema,
-  markPaymentPaidSchema,
-  PAYMENT_STATUS,
   planSchema,
   rejectBarbershopSchema,
 } from "@navalha/shared";
 import { prisma } from "../../lib/prisma";
 import { badRequest, notFound } from "../../lib/errors";
-import { DEFAULT_TZ } from "../../lib/time";
 import { requireAuth, requireRole } from "../../middlewares/auth";
-import { refreshSubscriptionStanding, syncBilling } from "../billing/billing.service";
 import { setTemporaryPassword } from "../auth/auth.service";
 
 export const adminRoutes = Router();
@@ -25,18 +21,10 @@ const ownerSelect = { select: { id: true, name: true, email: true, phone: true }
 // ---------- Visão geral ----------
 
 adminRoutes.get("/stats", async (_req, res) => {
-  const [byStatus, mrr, overdue, paidThisMonth] = await Promise.all([
+  const [byStatus, mrr] = await Promise.all([
     prisma.barbershop.groupBy({ by: ["status"], _count: true }),
-    prisma.subscription.aggregate({
-      where: { status: { in: ["ACTIVE", "PAST_DUE"] }, barbershop: { status: "ACTIVE" } },
-      _sum: { priceCents: true },
-    }),
-    prisma.payment.aggregate({ where: { status: "OVERDUE" }, _sum: { amountCents: true }, _count: true }),
-    prisma.payment.aggregate({
-      // início do mês no horário de Brasília (o servidor roda em UTC)
-      where: { status: "PAID", paidAt: { gte: DateTime.now().setZone(DEFAULT_TZ).startOf("month").toJSDate() } },
-      _sum: { amountCents: true },
-    }),
+    // soma do valor combinado com cada barbearia ativa (negociado e recebido por fora)
+    prisma.subscription.aggregate({ where: { barbershop: { status: "ACTIVE" } }, _sum: { priceCents: true } }),
   ]);
 
   const counts = Object.fromEntries(BARBERSHOP_STATUS.map((s) => [s, 0])) as Record<string, number>;
@@ -45,9 +33,6 @@ adminRoutes.get("/stats", async (_req, res) => {
   res.json({
     barbershops: counts,
     mrrCents: mrr._sum.priceCents ?? 0,
-    overdueCount: overdue._count,
-    overdueCents: overdue._sum.amountCents ?? 0,
-    receivedThisMonthCents: paidThisMonth._sum.amountCents ?? 0,
   });
 });
 
@@ -79,19 +64,7 @@ adminRoutes.get("/barbershops", async (req, res) => {
     },
   });
 
-  const overdue = await prisma.payment.groupBy({
-    by: ["subscriptionId"],
-    where: { status: "OVERDUE" },
-    _count: true,
-  });
-  const overdueBySub = new Map(overdue.map((o) => [o.subscriptionId, o._count]));
-
-  res.json(
-    barbershops.map((b) => ({
-      ...b,
-      overduePayments: b.subscription ? (overdueBySub.get(b.subscription.id) ?? 0) : 0,
-    })),
-  );
+  res.json(barbershops);
 });
 
 adminRoutes.get("/barbershops/:id", async (req, res) => {
@@ -99,7 +72,7 @@ adminRoutes.get("/barbershops/:id", async (req, res) => {
     where: { id: req.params.id },
     include: {
       owner: ownerSelect,
-      subscription: { include: { plan: true, payments: { orderBy: { dueDate: "desc" } } } },
+      subscription: { include: { plan: true } },
       _count: { select: { professionals: { where: { active: true } }, services: true, appointments: true } },
     },
   });
@@ -153,7 +126,6 @@ adminRoutes.post("/barbershops/:id/approve", async (req, res) => {
       update: subData,
     }),
   ]);
-  await syncBilling();
   res.json({ ok: true });
 });
 
@@ -208,50 +180,6 @@ adminRoutes.put("/barbershops/:id/subscription", async (req, res) => {
     data: { planId: plan.id, priceCents: input.priceCents ?? plan.priceCents, billingDay: input.billingDay },
   });
   res.json({ ok: true });
-});
-
-// ---------- Mensalidades ----------
-
-adminRoutes.get("/payments", async (req, res) => {
-  const { status } = z.object({ status: z.enum(PAYMENT_STATUS).optional() }).parse(req.query);
-  const payments = await prisma.payment.findMany({
-    where: status ? { status } : {},
-    orderBy: { dueDate: status === "PAID" ? "desc" : "asc" },
-    take: 200,
-    include: {
-      subscription: {
-        select: {
-          plan: { select: { name: true } },
-          barbershop: { select: { id: true, name: true, slug: true, status: true, owner: ownerSelect } },
-        },
-      },
-    },
-  });
-  res.json(payments);
-});
-
-adminRoutes.post("/payments/:id/pay", async (req, res) => {
-  const input = markPaymentPaidSchema.parse(req.body);
-  const payment = await prisma.payment.update({
-    where: { id: req.params.id },
-    data: { status: "PAID", paidAt: new Date(), method: input.method, notes: input.notes ?? null },
-  });
-  await refreshSubscriptionStanding(payment.subscriptionId);
-  res.json(payment);
-});
-
-/** Abona / cancela uma cobrança */
-adminRoutes.post("/payments/:id/cancel", async (req, res) => {
-  const payment = await prisma.payment.update({
-    where: { id: req.params.id },
-    data: { status: "CANCELED" },
-  });
-  await refreshSubscriptionStanding(payment.subscriptionId);
-  res.json(payment);
-});
-
-adminRoutes.post("/billing/sync", async (_req, res) => {
-  res.json(await syncBilling());
 });
 
 // ---------- Planos ----------

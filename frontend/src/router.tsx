@@ -55,7 +55,6 @@ export const router = createBrowserRouter([
           { index: true, lazy: page(() => import("@/features/admin/pages/AdminDashboardPage"), "AdminDashboardPage") },
           { path: "barbearias", lazy: page(() => import("@/features/admin/pages/AdminBarbershopsPage"), "AdminBarbershopsPage") },
           { path: "barbearias/:id", lazy: page(() => import("@/features/admin/pages/AdminBarbershopDetailPage"), "AdminBarbershopDetailPage") },
-          { path: "mensalidades", lazy: page(() => import("@/features/admin/pages/AdminPaymentsPage"), "AdminPaymentsPage") },
           { path: "atividade", lazy: page(() => import("@/features/admin/pages/AdminActivityPage"), "AdminActivityPage") },
           { path: "planos", lazy: page(() => import("@/features/admin/pages/AdminPlansPage"), "AdminPlansPage") },
         ],

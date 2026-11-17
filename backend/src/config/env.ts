@@ -7,7 +7,6 @@ const envSchema = z.object({
   JWT_SECRET: z.string().min(16, "JWT_SECRET precisa ter ao menos 16 caracteres"),
   JWT_EXPIRES_IN: z.string().default("7d"),
   WEB_URL: z.string().default("http://localhost:5173"),
-  BILLING_GRACE_DAYS: z.coerce.number().int().min(0).default(5),
   /** Quantos proxies confiáveis na frente da API (nginx da VPS + nginx do container = 2) */
   TRUST_PROXY: z.coerce.number().int().min(0).default(1),
   /** WhatsApp do suporte/admin mostrado aos donos (só dígitos, com DDD) */
