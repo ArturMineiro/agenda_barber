@@ -1,4 +1,4 @@
-import { Copy, ExternalLink, Share2 } from "lucide-react";
+import { Copy, Eye, ExternalLink, Share2 } from "lucide-react";
 import { toast } from "sonner";
 import { Button } from "@/components/ui/button";
 import { publicUrl } from "@/lib/utils";
@@ -26,7 +26,7 @@ export function ShareLinkCard({ shop }: { shop: Barbershop }) {
     <div className="relative overflow-hidden rounded-2xl bg-zinc-900 p-5 text-white">
       <div className="absolute -top-16 -right-10 size-48 rounded-full bg-amber-500/25 blur-3xl" />
       <div className="relative">
-        <p className="text-sm text-zinc-400">{live ? "Seu link de agendamento" : "Seu link (ativo após aprovação)"}</p>
+        <p className="text-sm text-zinc-400">{live ? "Seu link de agendamento" : "Seu link (ativo após aprovação) · a prévia só você vê"}</p>
         <p className="mt-1 truncate font-mono text-lg font-medium">{url.replace(/^https?:\/\//, "")}</p>
         <div className="mt-4 flex flex-wrap gap-2">
           <Button size="sm" className="bg-white text-zinc-900 hover:bg-zinc-100" onClick={copy}>
@@ -36,7 +36,7 @@ export function ShareLinkCard({ shop }: { shop: Barbershop }) {
             <Share2 /> Compartilhar
           </Button>
           <a href={url} target="_blank" rel="noreferrer" className="inline-flex h-9 items-center gap-2 rounded-xl px-3 text-sm text-zinc-300 hover:bg-white/10">
-            <ExternalLink className="size-4" /> Ver página
+            {live ? <ExternalLink className="size-4" /> : <Eye className="size-4" />} {live ? "Ver página" : "Ver prévia"}
           </a>
         </div>
       </div>

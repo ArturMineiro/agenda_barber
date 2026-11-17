@@ -1,14 +1,14 @@
 import { useForm, useWatch } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { Link } from "react-router-dom";
-import { Bell, CalendarDays, Check, ChevronRight, Clock, Instagram, ListOrdered, MapPin, Moon, Sun } from "lucide-react";
+import { Bell, CalendarDays, Check, ChevronRight, Clock, Eye, Instagram, ListOrdered, MapPin, Moon, Sun } from "lucide-react";
 import { barbershopSettingsSchema, SLOT_INTERVALS, TIMEZONE_IDS, TIMEZONE_LABELS, type BarbershopSettingsInput, type TimezoneId } from "@navalha/shared";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Field, Input, Select, Textarea } from "@/components/ui/input";
 import { PageHeader } from "@/components/ui/misc";
 import { ApiError } from "@/lib/api";
-import { cn, maskPhone, formatPhone } from "@/lib/utils";
+import { cn, maskPhone, formatPhone, publicUrl } from "@/lib/utils";
 import { accentFor, heroBackground, readableOn } from "@/lib/theme";
 import { BrandImagesEditor } from "@/components/ImageUpload";
 import { ThemePicker } from "@/components/ThemePicker";
@@ -111,6 +111,14 @@ export function SettingsPage() {
                 <CardTitle>Aparência</CardTitle>
                 <p className="mt-0.5 text-sm text-zinc-500">É assim que o topo da sua página aparece para o cliente.</p>
               </div>
+              <a
+                href={publicUrl(shop.slug)}
+                target="_blank"
+                rel="noreferrer"
+                className="inline-flex shrink-0 items-center gap-1.5 rounded-lg px-2.5 py-1.5 text-sm font-medium text-zinc-700 ring-1 ring-zinc-200 hover:bg-zinc-50"
+              >
+                <Eye className="size-4" /> {shop.status === "ACTIVE" ? "Ver página" : "Ver prévia"}
+              </a>
             </CardHeader>
             <CardContent className="space-y-6">
               <BrandImagesEditor

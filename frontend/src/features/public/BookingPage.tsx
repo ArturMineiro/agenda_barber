@@ -25,6 +25,7 @@ import { saveBooking, upcomingBookings } from "@/lib/my-bookings";
 import { addDaysToKey, cn, formatDuration, formatLongDate, formatMoney, formatTime, formatWeekdayShort, maskPhone, setDisplayTimeZone, todayKey, whatsappLink } from "@/lib/utils";
 import type { Slot } from "@/types/api";
 import { QueueView } from "./QueueView";
+import { PreviewBanner } from "./PreviewBanner";
 import { Hero } from "./Hero";
 import { RatingInline, ReviewsSection } from "./Reviews";
 import { CatalogCarousel, ServiceSheet, ServiceThumb, type CatalogService } from "./Catalog";
@@ -53,6 +54,7 @@ export function BookingPage() {
 
   return (
     <div style={brandVars(data.barbershop.primaryColor, data.barbershop.secondaryColor, data.barbershop.pageTheme)} className="min-h-dvh bg-zinc-50">
+      {data.preview && <PreviewBanner status={data.preview.status} />}
       <Booking data={data} slug={slug} />
     </div>
   );
@@ -192,6 +194,7 @@ function ScheduleBooking({ data, slug }: { data: PublicBarbershop; slug: string 
 
         {step === "details" && service && slot && (
           <DetailsStep
+            preview={!!data.preview}
             slug={slug}
             serviceId={service.id}
             professionalId={professionalId ?? slot.professionalIds[0]!}
@@ -332,6 +335,8 @@ function TimeStep(props: {
 }
 
 function DetailsStep(props: {
+  /** prévia antes da aprovação: mostra o formulário, mas não agenda */
+  preview: boolean;
   slug: string;
   serviceId: string;
   professionalId: string;
@@ -405,9 +410,20 @@ function DetailsStep(props: {
       <Field label="Alguma observação? (opcional)">
         <Textarea rows={2} className="min-h-0" value={notes} onChange={(e) => setNotes(e.target.value)} />
       </Field>
-      <Button type="submit" variant="brand" size="lg" className="w-full" loading={book.isPending}>
-        Confirmar agendamento
-      </Button>
+      {props.preview ? (
+        <>
+          <Button type="button" variant="brand" size="lg" className="w-full" disabled>
+            Confirmar agendamento
+          </Button>
+          <p className="rounded-xl bg-amber-50 px-4 py-3 text-center text-sm text-amber-900 ring-1 ring-amber-200">
+            Isto é uma prévia: o cliente confirma aqui. Os agendamentos pelo link começam quando a barbearia for aprovada.
+          </p>
+        </>
+      ) : (
+        <Button type="submit" variant="brand" size="lg" className="w-full" loading={book.isPending}>
+          Confirmar agendamento
+        </Button>
+      )}
     </form>
   );
 }

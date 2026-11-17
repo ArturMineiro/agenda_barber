@@ -1,5 +1,5 @@
 import { useMutation, useQueries, useQuery, useQueryClient } from "@tanstack/react-query";
-import type { AppointmentStatus, BookingMode, PageTheme, CreateBookingInput, RescheduleInput, ReviewInput, TeamType } from "@navalha/shared";
+import type { AppointmentStatus, BarbershopStatus, BookingMode, PageTheme, CreateBookingInput, RescheduleInput, ReviewInput, TeamType } from "@navalha/shared";
 import { api, qs } from "@/lib/api";
 import type { Slot } from "@/types/api";
 
@@ -34,6 +34,8 @@ export interface PublicBarbershop {
     /** média das avaliações deste serviço (null = ainda sem avaliação) */
     rating: { average: number; count: number } | null;
   }[];
+  /** página ainda não está no ar: só o dono/equipe/admin está vendo (não dá para agendar) */
+  preview: { status: BarbershopStatus } | null;
   reviews: {
     average: number | null;
     count: number;

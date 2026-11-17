@@ -1,10 +1,10 @@
 import { Link } from "react-router-dom";
-import { ArrowRight, Ban, BellRing, X, CalendarDays, CheckCircle2, Circle, Clock, DollarSign, ListOrdered, Pencil, TrendingUp } from "lucide-react";
+import { ArrowRight, Ban, BellRing, X, CalendarDays, CheckCircle2, Circle, Clock, DollarSign, Eye, ListOrdered, Pencil, TrendingUp } from "lucide-react";
 import { EmptyState, PageHeader, Skeleton, StatCard } from "@/components/ui/misc";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { useMe } from "@/features/auth/api";
 import { Avatar } from "@/components/ui/misc";
-import { cn, formatDuration, formatMoney } from "@/lib/utils";
+import { cn, formatDuration, formatMoney, publicUrl } from "@/lib/utils";
 import { useBarbershop, useDashboard, useProfessionals, useQueue, useReminders, useServices } from "../api";
 import { AppointmentCard } from "../components/AppointmentCard";
 import { ShareLinkCard } from "../components/ShareLinkCard";
@@ -181,6 +181,17 @@ function Onboarding() {
             <ArrowRight className="size-4 text-zinc-400" />
           </Link>
         ))}
+        {shop && (
+          <a
+            href={publicUrl(shop.slug)}
+            target="_blank"
+            rel="noreferrer"
+            className="mt-2 flex items-center justify-center gap-2 rounded-xl bg-zinc-900 px-4 py-3 text-sm font-medium text-white hover:bg-zinc-800"
+          >
+            <Eye className="size-4" /> Ver prévia da minha página
+          </a>
+        )}
+        <p className="px-2 pt-1 text-center text-xs text-zinc-500">A prévia mostra a página como o cliente vai ver. Só você enxerga até a aprovação.</p>
       </CardContent>
     </Card>
   );

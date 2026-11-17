@@ -384,6 +384,45 @@ async function main() {
   ok(combinado.status === 200 && (await admin("GET", `/admin/barbershops/${alvo.id}`)).data.subscription.priceCents === 4500, "admin ajusta o valor combinado", combinado);
   ok((await admin("GET", "/admin/stats")).data.mrrCents > 0, "visão geral soma o combinado");
 
+  // ---------------------------------------------------------------
+  group("Prévia da página antes da aprovação");
+  const novo = client();
+  const slugNovo = `previa-${Date.now().toString(36)}`;
+  await novo("POST", "/auth/register", {
+    name: "Dono Prévia",
+    email: `${slugNovo}@teste.local`,
+    phone: "11999990000",
+    password: "senhadono123",
+    barbershop: { name: "Barbearia Prévia", slug: slugNovo, teamType: "SOLO", bookingMode: "SCHEDULE", city: "Rio" },
+  });
+  const pendente = (await novo("GET", "/panel/barbershop")).data;
+  ok(pendente.status === "PENDING", "cadastro novo fica pendente");
+  const anon = client();
+  ok((await anon("GET", `/public/barbershops/${slugNovo}`)).status === 423, "cliente comum continua sem ver a página");
+  const prev = await novo("GET", `/public/barbershops/${slugNovo}`);
+  ok(prev.status === 200 && prev.data.preview?.status === "PENDING", "dono vê a página em modo prévia", prev);
+  ok(prev.data.services.length > 0, "prévia mostra os serviços");
+  const svcPrev = prev.data.services[0];
+  const proPrev = prev.data.professionals[0];
+  await novo("PUT", `/panel/professionals/${proPrev.id}/hours`, {
+    hours: [0, 1, 2, 3, 4, 5, 6].map((weekday) => ({ weekday, startMinute: 9 * 60, endMinute: 18 * 60 })),
+  });
+  const avPrev = await novo("GET", `/public/barbershops/${slugNovo}/availability?serviceId=${svcPrev.id}&date=${spDate(2)}`);
+  ok(avPrev.status === 200 && avPrev.data.slots.length > 0, "prévia mostra os horários livres", avPrev);
+  ok((await anon("GET", `/public/barbershops/${slugNovo}/availability?serviceId=${svcPrev.id}&date=${spDate(2)}`)).status === 423, "cliente comum não vê os horários");
+  const tentativa = await novo("POST", `/public/barbershops/${slugNovo}/bookings`, {
+    serviceId: svcPrev.id,
+    professionalId: proPrev.id,
+    startsAt: avPrev.data.slots[0]?.startsAt,
+    clientName: "Teste Prévia",
+    clientPhone: "11988887777",
+  });
+  ok(tentativa.status === 423, "na prévia não dá para agendar", tentativa);
+  ok((await dono("GET", `/public/barbershops/${slugNovo}`)).status === 423, "dono de outra barbearia não vê a prévia");
+  const adminPrev = await admin("GET", `/public/barbershops/${slugNovo}`);
+  ok(adminPrev.status === 200 && adminPrev.data.preview, "admin vê a prévia");
+  ok(prev.data.preview && (await anon("GET", `/public/barbershops/${alvo.slug}`)).data.preview === null, "barbearia ativa não aparece como prévia");
+
   console.log(failures ? `\n✗ ${failures} falha(s)` : "\n✓ Tudo certo");
 }
 
