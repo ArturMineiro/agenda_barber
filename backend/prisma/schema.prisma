@@ -31,9 +31,17 @@ enum TeamType {
 }
 
 /// Como a barbearia atende
+/// Fundo da página pública (paletas no frontend: lib/theme.ts)
 enum PageTheme {
   LIGHT
   DARK
+  CREAM
+  ICE
+  GRAPHITE
+  NAVY
+  GREEN
+  WINE
+  COFFEE
 }
 
 enum BookingMode {

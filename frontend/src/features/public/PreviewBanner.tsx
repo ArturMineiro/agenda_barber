@@ -11,7 +11,8 @@ const TEXT: Partial<Record<BarbershopStatus, string>> = {
 /** Faixa fixa no topo da página pública em modo prévia (antes da aprovação) */
 export function PreviewBanner({ status }: { status: BarbershopStatus }) {
   return (
-    <div className="sticky top-0 z-30 border-b border-white/10 bg-zinc-900/95 text-white backdrop-blur">
+    // cores fixas: a escala zinc muda com o fundo escolhido (no escuro, zinc-900 vira quase branco)
+    <div className="sticky top-0 z-30 border-b border-white/10 text-white backdrop-blur" style={{ backgroundColor: "rgb(24 24 27 / 0.95)" }}>
       <div className="mx-auto flex max-w-xl items-center gap-3 px-4 py-2.5">
         <Eye className="size-4 shrink-0 text-amber-400" />
         <p className="min-w-0 flex-1 text-xs leading-snug sm:text-sm">

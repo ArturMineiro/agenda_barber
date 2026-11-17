@@ -1,15 +1,16 @@
+import type * as React from "react";
 import { useForm, useWatch } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { Link } from "react-router-dom";
 import { Bell, CalendarDays, Check, ChevronRight, Clock, Eye, Instagram, ListOrdered, MapPin, Moon, Sun } from "lucide-react";
-import { barbershopSettingsSchema, SLOT_INTERVALS, TIMEZONE_IDS, TIMEZONE_LABELS, type BarbershopSettingsInput, type TimezoneId } from "@navalha/shared";
+import { barbershopSettingsSchema, PAGE_THEMES, SLOT_INTERVALS, TIMEZONE_IDS, TIMEZONE_LABELS, type BarbershopSettingsInput, type TimezoneId } from "@navalha/shared";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Field, Input, Select, Textarea } from "@/components/ui/input";
 import { PageHeader } from "@/components/ui/misc";
 import { ApiError } from "@/lib/api";
 import { cn, maskPhone, formatPhone, publicUrl } from "@/lib/utils";
-import { accentFor, heroBackground, readableOn } from "@/lib/theme";
+import { accentFor, heroBackground, isDarkTheme, PAGE_BACKGROUNDS, pageBg, readableOn, themeClasses, themeVars } from "@/lib/theme";
 import { BrandImagesEditor } from "@/components/ImageUpload";
 import { ThemePicker } from "@/components/ThemePicker";
 import type { Barbershop } from "@/types/api";
@@ -146,46 +147,53 @@ export function SettingsPage() {
               </Field>
 
               <Field label="Fundo da página">
-                <div className="grid grid-cols-2 gap-2.5">
-                  {(
-                    [
-                      { v: "LIGHT", label: "Claro", icon: Sun, bg: "#fafafa", card: "#ffffff", line: "#e4e4e7" },
-                      { v: "DARK", label: "Escuro", icon: Moon, bg: "#0b0b0d", card: "#161618", line: "#2c2c31" },
-                    ] as const
-                  ).map((o) => {
-                    const active = pageTheme === o.v;
-                    const btn = accentFor(primary, secondary, o.v);
-                    return (
-                      <button
-                        key={o.v}
-                        type="button"
-                        onClick={() => form.setValue("pageTheme", o.v, { shouldDirty: true })}
-                        className={cn(
-                          "overflow-hidden rounded-xl text-left ring-1 ring-zinc-200 transition hover:ring-zinc-400",
-                          active && "ring-2 ring-zinc-900 hover:ring-zinc-900",
-                        )}
-                      >
-                        <div className="space-y-1.5 p-2.5" style={{ background: o.bg }}>
-                          <div className="h-2 w-2/3 rounded-full" style={{ background: o.line }} />
-                          <div className="flex items-center justify-between rounded-lg p-2" style={{ background: o.card, boxShadow: `inset 0 0 0 1px ${o.line}` }}>
-                            <div className="h-1.5 w-10 rounded-full" style={{ background: o.line }} />
-                            <span className="rounded-md px-1.5 py-0.5 text-[9px] font-semibold" style={{ background: btn, color: readableOn(btn) }}>
-                              Agendar
-                            </span>
-                          </div>
-                        </div>
-                        <div className="flex items-center justify-between bg-white px-2.5 py-1.5 text-xs font-medium">
-                          <span className="inline-flex items-center gap-1.5">
-                            <o.icon className="size-3.5" /> {o.label}
-                          </span>
-                          {active && <Check className="size-3.5" />}
-                        </div>
-                      </button>
-                    );
-                  })}
-                </div>
-                {pageTheme === "DARK" && accent !== primary && (
-                  <p className="mt-2 text-xs text-zinc-500">Sua cor principal é muito escura para o fundo escuro, então os botões usam a cor de apoio.</p>
+                {([
+                  ["Claros", PAGE_THEMES.filter((t) => !isDarkTheme(t))],
+                  ["Escuros", PAGE_THEMES.filter((t) => isDarkTheme(t))],
+                ] as const).map(([group, themes]) => (
+                  <div key={group} className="mb-3 last:mb-0">
+                    <p className="mb-1.5 flex items-center gap-1.5 text-xs font-medium text-zinc-500">
+                      {group === "Claros" ? <Sun className="size-3.5" /> : <Moon className="size-3.5" />} {group}
+                    </p>
+                    <div className="grid grid-cols-3 gap-2">
+                      {themes.map((t) => {
+                        const bg = PAGE_BACKGROUNDS[t];
+                        const line = bg.scale?.[2] ?? "#e4e4e7";
+                        const text = bg.scale?.[9] ?? "#18181b";
+                        const active = pageTheme === t;
+                        const btn = accentFor(primary, secondary, t);
+                        return (
+                          <button
+                            key={t}
+                            type="button"
+                            onClick={() => form.setValue("pageTheme", t, { shouldDirty: true })}
+                            aria-pressed={active}
+                            className={cn(
+                              "overflow-hidden rounded-xl text-left ring-1 ring-zinc-200 transition hover:ring-zinc-400",
+                              active && "ring-2 ring-zinc-900 hover:ring-zinc-900",
+                            )}
+                          >
+                            <div className="space-y-1.5 p-2" style={{ background: pageBg(t) }}>
+                              <div className="h-1.5 w-2/3 rounded-full" style={{ background: text, opacity: 0.85 }} />
+                              <div className="flex items-center justify-between gap-1 rounded-lg p-1.5" style={{ background: bg.card, boxShadow: `inset 0 0 0 1px ${line}` }}>
+                                <div className="h-1.5 w-8 rounded-full" style={{ background: line }} />
+                                <span className="rounded px-1 py-0.5 text-[8px] font-semibold" style={{ background: btn, color: readableOn(btn) }}>
+                                  Agendar
+                                </span>
+                              </div>
+                            </div>
+                            <div className="flex items-center justify-between bg-white px-2 py-1.5 text-xs font-medium">
+                              <span className="truncate">{bg.label}</span>
+                              {active && <Check className="size-3.5 shrink-0" />}
+                            </div>
+                          </button>
+                        );
+                      })}
+                    </div>
+                  </div>
+                ))}
+                {isDarkTheme(pageTheme) && accent !== primary && (
+                  <p className="mt-2 text-xs text-zinc-500">Sua cor principal é muito escura para este fundo, então os botões usam a cor de apoio.</p>
                 )}
               </Field>
             </CardContent>
@@ -372,7 +380,7 @@ export function SettingsPage() {
         <div className="hidden lg:block">
           <div className="sticky top-8">
             <p className="mb-2 text-sm font-medium text-zinc-500">Prévia</p>
-            <div className={cn(pageTheme === "DARK" && "public-dark")}>
+            <div className={themeClasses(pageTheme)} style={themeVars(pageTheme) as React.CSSProperties}>
             <div className="overflow-hidden rounded-3xl border border-zinc-200 bg-white text-zinc-900 shadow-lg">
               <div className="h-28" style={heroBackground(primary, secondary, preview.coverUrl)} />
               <div className="relative -mt-8 px-5 pb-5">

@@ -349,6 +349,8 @@ async function main() {
   const put = await asAdmin("PUT", "/panel/barbershop", { ...pickSettings(cfg), description: "Ajustado pelo suporte" });
   ok(put.status === 200 && (await dono("GET", "/panel/barbershop")).data.description === "Ajustado pelo suporte", "admin altera os ajustes", put);
   ok((await asAdmin("GET", "/panel/push")).status === 403, "notificações do celular continuam só do dono");
+  const navy = await asAdmin("PUT", "/panel/barbershop", { ...pickSettings(cfg), description: "Ajustado pelo suporte", pageTheme: "NAVY" });
+  ok(navy.status === 200 && (await client()("GET", `/public/barbershops/${alvo.slug}`)).data.barbershop.pageTheme === "NAVY", "fundo novo (Marinho) salva e aparece na página", navy);
   ok((await dono.with({ "x-barbershop-id": shop.id })("GET", "/panel/barbershop")).status === 404, "dono continua sem acesso à barbearia de outro");
 
   // ---------------------------------------------------------------

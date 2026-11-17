@@ -28,7 +28,8 @@ export const BOOKING_MODES = ["SCHEDULE", "QUEUE"] as const;
 export type BookingMode = (typeof BOOKING_MODES)[number];
 
 /** Fundo da página pública da barbearia */
-export const PAGE_THEMES = ["LIGHT", "DARK"] as const;
+/** Fundos da página pública: claros primeiro, depois os escuros (paletas em frontend/src/lib/theme.ts) */
+export const PAGE_THEMES = ["LIGHT", "CREAM", "ICE", "DARK", "GRAPHITE", "NAVY", "GREEN", "WINE", "COFFEE"] as const;
 export type PageTheme = (typeof PAGE_THEMES)[number];
 
 export const QUEUE_STATUS = ["WAITING", "IN_SERVICE", "DONE", "NO_SHOW", "CANCELED"] as const;
