@@ -7,9 +7,15 @@ import { queryClient } from "@/lib/query-client";
 import { router } from "@/router";
 import { ConfirmHost } from "@/components/ConfirmHost";
 import { registerServiceWorker } from "@/lib/push";
+import { reloadForNewVersion } from "@/lib/stale-build";
 import "./index.css";
 
 registerServiceWorker();
+
+// arquivo de uma versão antiga não existe mais (houve deploy): recarrega para pegar a nova
+window.addEventListener("vite:preloadError", (e) => {
+  if (reloadForNewVersion()) e.preventDefault();
+});
 
 ReactDOM.createRoot(document.getElementById("root")!).render(
   <React.StrictMode>
