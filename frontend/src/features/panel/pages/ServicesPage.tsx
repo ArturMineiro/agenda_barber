@@ -14,6 +14,7 @@ import { cn, formatDuration, formatMoney } from "@/lib/utils";
 import type { Service } from "@/types/api";
 import { useDeleteService, useSaveService, useServices } from "../api";
 import { ServicePhotos } from "../components/ServicePhotos";
+import { confirmar } from "@/components/ConfirmHost";
 
 /** No formulário o preço é digitado em reais ("45,90"); a API recebe centavos */
 const formSchema = serviceSchema.omit({ priceCents: true }).extend({
@@ -145,8 +146,15 @@ function ServiceDialog({
     ),
   );
 
-  const onDelete = () => {
-    if (isEdit && confirm(`Remover "${service.name}"? Se já tiver agendamentos, ele só será desativado.`)) {
+  const onDelete = async () => {
+    if (!isEdit) return;
+    const ok = await confirmar({
+      title: `Remover "${service.name}"?`,
+      description: "Se já tiver agendamentos, ele só é desativado (o histórico continua nos relatórios).",
+      confirmLabel: "Remover",
+      danger: true,
+    });
+    if (ok) {
       remove.mutate(service.id, { onSuccess: onClose });
     }
   };

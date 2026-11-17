@@ -6,6 +6,7 @@ import { formatBytes, uploadServicePhoto } from "@/lib/image";
 import { cn } from "@/lib/utils";
 import type { Service } from "@/types/api";
 import { useServicePhotoActions, useServices } from "../api";
+import { confirmar } from "@/components/ConfirmHost";
 
 const MAX = 3;
 
@@ -77,7 +78,7 @@ export function ServicePhotos({ serviceId }: { serviceId: string }) {
               )}
               <button
                 type="button"
-                onClick={() => confirm("Remover esta foto?") && remove.mutate(p.id)}
+                onClick={async () => (await confirmar({ title: "Remover esta foto?", confirmLabel: "Remover", danger: true })) && remove.mutate(p.id)}
                 className="rounded-lg bg-white/90 p-1.5 text-red-600 hover:bg-white"
                 aria-label="Remover foto"
                 title="Remover"

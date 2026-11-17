@@ -20,9 +20,15 @@ interface DialogProps {
  * no desktop vira um modal centralizado.
  */
 export function Dialog({ open, onClose, title, description, children, footer, className, dismissible = true }: DialogProps) {
+  const ref = React.useRef<HTMLDivElement>(null);
   React.useEffect(() => {
     if (!open) return;
-    const onKey = (e: KeyboardEvent) => dismissible && e.key === "Escape" && onClose();
+    const onKey = (e: KeyboardEvent) => {
+      if (!dismissible || e.key !== "Escape") return;
+      // com um modal por cima de outro, o Esc fecha só o de cima
+      const all = document.querySelectorAll('[role="dialog"]');
+      if (all[all.length - 1] === ref.current) onClose();
+    };
     document.addEventListener("keydown", onKey);
     const prev = document.body.style.overflow;
     document.body.style.overflow = "hidden";
@@ -38,6 +44,7 @@ export function Dialog({ open, onClose, title, description, children, footer, cl
     <div className="fixed inset-0 z-50 flex items-end justify-center sm:items-center sm:p-4">
       <div className="absolute inset-0 bg-zinc-950/40 backdrop-blur-[2px] animate-in" onClick={dismissible ? onClose : undefined} />
       <div
+        ref={ref}
         role="dialog"
         aria-modal="true"
         className={cn(

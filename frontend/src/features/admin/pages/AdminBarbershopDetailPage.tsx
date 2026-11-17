@@ -23,6 +23,7 @@ import {
 } from "../api";
 import { ActivityList } from "../components/ActivityList";
 import { ShopStatusBadge } from "../components/status";
+import { confirmar, perguntar } from "@/components/ConfirmHost";
 
 const toCents = (v: string) => Math.round(Number(v.replace(",", ".")) * 100);
 const fromCents = (c: number) => (c / 100).toFixed(2).replace(".", ",");
@@ -76,8 +77,16 @@ export function AdminBarbershopDetailPage() {
               size="sm"
               className="text-red-600"
               loading={suspend.isPending}
-              onClick={() => {
-                const reason = prompt("Motivo da suspensão (opcional):");
+              onClick={async () => {
+                const reason = await perguntar({
+                  title: `Suspender ${shop.name}?`,
+                  description: "A página sai do ar para os clientes até você reativar. O dono vê o motivo no painel.",
+                  label: "Motivo (opcional)",
+                  suggestions: ["Pagamento em atraso", "A pedido do dono", "Uso indevido"],
+                  optional: true,
+                  confirmLabel: "Suspender",
+                  danger: true,
+                });
                 if (reason !== null) suspend.mutate({ id: shop.id, reason: reason || undefined });
               }}
             >
@@ -258,10 +267,14 @@ function ResetOwnerPassword({ shop }: { shop: AdminBarbershop }) {
         variant="outline"
         className="mt-1 w-full"
         loading={reset.isPending}
-        onClick={() =>
-          confirm(`Gerar uma senha temporária para ${shop.owner.name}? A senha atual para de funcionar e os aparelhos logados saem.`) &&
-          reset.mutate(shop.id, { onSuccess: (r) => setTemp(r.tempPassword) })
-        }
+        onClick={async () => {
+          const ok = await confirmar({
+            title: `Gerar senha temporária para ${shop.owner.name}?`,
+            description: "A senha atual para de funcionar e os aparelhos logados saem. Você manda a nova pelo WhatsApp.",
+            confirmLabel: "Gerar senha",
+          });
+          if (ok) reset.mutate(shop.id, { onSuccess: (r) => setTemp(r.tempPassword) });
+        }}
       >
         <KeyRound /> Gerar senha temporária
       </Button>
@@ -367,8 +380,15 @@ function ApprovalCard({ shop }: { shop: AdminBarbershop }) {
               variant="outline"
               className="text-red-600"
               loading={reject.isPending}
-              onClick={() => {
-                const reason = prompt("Motivo da recusa (opcional, o dono verá):");
+              onClick={async () => {
+                const reason = await perguntar({
+                  title: `Recusar o cadastro de ${shop.name}?`,
+                  description: "O dono verá o motivo no painel.",
+                  label: "Motivo (opcional)",
+                  optional: true,
+                  confirmLabel: "Recusar",
+                  danger: true,
+                });
                 if (reason !== null) reject.mutate({ id: shop.id, reason: reason || undefined });
               }}
             >

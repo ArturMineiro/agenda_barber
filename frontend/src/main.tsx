@@ -5,6 +5,7 @@ import { RouterProvider } from "react-router-dom";
 import { Toaster } from "sonner";
 import { queryClient } from "@/lib/query-client";
 import { router } from "@/router";
+import { ConfirmHost } from "@/components/ConfirmHost";
 import { registerServiceWorker } from "@/lib/push";
 import "./index.css";
 
@@ -15,6 +16,7 @@ ReactDOM.createRoot(document.getElementById("root")!).render(
     <QueryClientProvider client={queryClient}>
       <RouterProvider router={router} />
       <Toaster position="top-center" richColors closeButton />
+      <ConfirmHost />
     </QueryClientProvider>
   </React.StrictMode>,
 );

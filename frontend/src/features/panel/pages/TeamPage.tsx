@@ -1,3 +1,4 @@
+import { toast } from "sonner";
 import * as React from "react";
 import { Clock, KeyRound, Pencil, Plus, Trash2, Users } from "lucide-react";
 import { TempPasswordDialog } from "@/components/TempPasswordDialog";
@@ -23,6 +24,7 @@ import {
 import { HoursEditor, hoursSummary } from "../components/HoursEditor";
 import { TimeOffSection } from "../components/TimeOffSection";
 import { AvatarUpload } from "@/components/ImageUpload";
+import { confirmar } from "@/components/ConfirmHost";
 
 export function TeamPage() {
   const { data: shop } = useBarbershop();
@@ -110,7 +112,7 @@ function SoloHours({ pro }: { pro: Professional }) {
 
   const submit = () => {
     const parsed = workingHoursSchema.safeParse({ hours });
-    if (!parsed.success) return alert(parsed.error.issues[0]?.message);
+    if (!parsed.success) return void toast.error(parsed.error.issues[0]?.message ?? "Confira os horários");
     save.mutate({ id: pro.id, hours: parsed.data.hours });
   };
 
@@ -179,7 +181,14 @@ function ProfessionalDialog({ pro, onClose }: { pro: Professional | "new" | null
               variant="ghost"
               className="text-red-600 sm:mr-auto"
               loading={remove.isPending}
-              onClick={() => confirm(`Remover ${pro.name}?`) && remove.mutate(pro.id, { onSuccess: onClose })}
+              onClick={async () =>
+                (await confirmar({
+                  title: `Remover ${pro.name}?`,
+                  description: "Se já tiver atendimentos, ele só é desativado (o histórico continua).",
+                  confirmLabel: "Remover",
+                  danger: true,
+                })) && remove.mutate(pro.id, { onSuccess: onClose })
+              }
             >
               <Trash2 />
             </Button>
@@ -235,7 +244,7 @@ function HoursDialog({ pro, onClose }: { pro: Professional | null; onClose: () =
 
   const submit = () => {
     const parsed = workingHoursSchema.safeParse({ hours });
-    if (!parsed.success) return alert(parsed.error.issues[0]?.message);
+    if (!parsed.success) return void toast.error(parsed.error.issues[0]?.message ?? "Confira os horários");
     save.mutate({ id: pro!.id, hours: parsed.data.hours }, { onSuccess: onClose });
   };
 
@@ -288,8 +297,9 @@ function AccessSection({ pro }: { pro: Professional }) {
               size="sm"
               variant="outline"
               loading={access.reset.isPending}
-              onClick={() =>
-                confirm(`Gerar uma senha nova para ${first}? A atual para de funcionar.`) && access.reset.mutate(undefined, { onSuccess: setResult })
+              onClick={async () =>
+                (await confirmar({ title: `Gerar uma senha nova para ${first}?`, description: "A senha atual para de funcionar.", confirmLabel: "Gerar senha" })) &&
+                access.reset.mutate(undefined, { onSuccess: setResult })
               }
             >
               Gerar nova senha
@@ -299,7 +309,14 @@ function AccessSection({ pro }: { pro: Professional }) {
               variant="ghost"
               className="text-red-600"
               loading={access.remove.isPending}
-              onClick={() => confirm(`Remover o acesso de ${first} ao painel?`) && access.remove.mutate()}
+              onClick={async () =>
+                (await confirmar({
+                  title: `Remover o acesso de ${first} ao painel?`,
+                  description: "O login deixa de funcionar. A agenda e o histórico dele continuam.",
+                  confirmLabel: "Remover acesso",
+                  danger: true,
+                })) && access.remove.mutate()
+              }
             >
               Remover acesso
             </Button>
